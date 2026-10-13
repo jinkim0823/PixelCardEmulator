@@ -3,7 +3,6 @@
 
     <!-- Card list -->
     <string name="cards">卡片</string>
-    <string name="tap_to_activate">点按卡片即可激活</string>
     <string name="add_card">添加卡片</string>
     <string name="active">已激活</string>
     <string name="default_card">默认</string>

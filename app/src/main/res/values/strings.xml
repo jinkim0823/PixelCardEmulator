@@ -3,7 +3,6 @@
 
     <!-- Card list -->
     <string name="cards">Cards</string>
-    <string name="tap_to_activate">Tap a card to activate</string>
     <string name="add_card">Add card</string>
     <string name="active">Active</string>
     <string name="default_card">Default</string>

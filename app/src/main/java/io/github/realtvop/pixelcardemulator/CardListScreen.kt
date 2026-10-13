@@ -46,6 +46,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -86,7 +87,7 @@ fun CardListScreen(
     showPermissionBanner: Boolean = false,
     onPermissionBannerClick: () -> Unit = {},
 ) {
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     // The card whose swipe menu is open. Held here so that opening one closes any other.
     var swipedCardId by remember { mutableStateOf<String?>(null) }
     var appMenuOpen by remember { mutableStateOf(false) }
@@ -95,9 +96,8 @@ fun CardListScreen(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             Column {
-                InlineActionsTopAppBar(
+                TopAppBar(
                     title = { Text(stringResource(R.string.cards)) },
-                    subtitle = { Text(stringResource(R.string.tap_to_activate)) },
                     actions = {
                         FilledTonalIconButton(
                             onClick = onAddCard,
