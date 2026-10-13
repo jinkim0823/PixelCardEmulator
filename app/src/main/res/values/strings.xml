@@ -8,6 +8,13 @@
     <string name="active">Active</string>
     <string name="default_card">Default</string>
     <string name="edit">Edit</string>
+    <string name="tips">Tips</string>
+    <string-array name="card_tips">
+        <item>Tap + to add a card.</item>
+        <item>Enter the UID, or scan a card by holding it against the back of the phone.</item>
+        <item>Only one card can be active at a time. Tap the active card again to deactivate it.</item>
+        <item>Swipe a card to edit it or make it the default, which activates it when the app opens.</item>
+    </string-array>
 
     <!-- Add or edit card -->
     <string name="back">Back</string>
