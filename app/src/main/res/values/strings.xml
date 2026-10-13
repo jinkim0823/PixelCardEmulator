@@ -22,6 +22,7 @@
     <string name="save">Save</string>
     <string name="uid_hidden">Hidden</string>
     <string name="show">Show</string>
+    <string name="hide">Hide</string>
     <string name="delete_card">Delete card</string>
     <string name="delete_card_title">Delete “%1$s”?</string>
     <string name="delete_card_message">This removes the card from your list.</string>

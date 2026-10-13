@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -18,6 +19,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectableGroup
@@ -47,9 +49,9 @@ import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.ToggleButton
@@ -70,11 +72,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextRange
@@ -103,26 +104,23 @@ fun CardEditorScreen(
     val haptics = LocalHapticFeedback.current
     val name = rememberTextFieldState(card?.name.orEmpty())
     val typedUid = rememberTextFieldState(card?.uid.orEmpty())
-    var scanMode by rememberSaveable { mutableStateOf(false) }
     var uidSize by rememberSaveable { mutableIntStateOf(card?.uidSize ?: UidSizes.first()) }
-    var scannedUid by rememberSaveable { mutableStateOf<String?>(null) }
-    var scanError by rememberSaveable { mutableStateOf<String?>(null) }
-    // A saved UID stays hidden until it is asked for; a new card has nothing to hide.
+    // A saved UID stays hidden until it is asked for; a new card starts shown by default.
     var uidShown by rememberSaveable { mutableStateOf(card == null) }
+    var scanning by rememberSaveable { mutableStateOf(false) }
+    var lastScannedUid by rememberSaveable { mutableStateOf<String?>(null) }
+    var scanError by rememberSaveable { mutableStateOf<String?>(null) }
     var confirmingDelete by rememberSaveable { mutableStateOf(false) }
 
-    // Null until the chosen source has produced a complete UID. A saved UID left hidden is kept as is.
-    val uid = when {
-        !uidShown -> card?.uid
-        scanMode -> scannedUid
-        else -> typedUid.text.toString().takeIf { it.length == uidSize * 2 }
-    }
+    // Complete UID when entered/scanned size matches.
+    val uid = typedUid.text.toString().takeIf { it.length == uidSize * 2 }
 
     NfcUidReader(
-        enabled = scanMode && scannedUid == null,
+        enabled = scanning && lastScannedUid == null,
         onUid = { uidHex ->
-            scannedUid = uidHex
+            lastScannedUid = uidHex
             uidSize = uidHex.length / 2
+            typedUid.edit { replace(0, length, uidHex) }
             scanError = null
             haptics.performHapticFeedback(HapticFeedbackType.Confirm)
         },
@@ -203,46 +201,61 @@ fun CardEditorScreen(
                     shape = MaterialTheme.shapes.large,
                 )
 
+                OutlinedButton(
+                    onClick = {
+                        scanning = true
+                        lastScannedUid = null
+                        scanError = null
+                    },
+                    shapes = ButtonDefaults.shapes(),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(
+                        painterResource(R.drawable.ic_contactless),
+                        contentDescription = null,
+                        modifier = Modifier.size(ButtonDefaults.IconSize),
+                    )
+                    Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+                    Text(stringResource(R.string.scan_card))
+                }
+
                 AnimatedContent(targetState = uidShown, label = "uid") { shown ->
                     if (shown) {
-                        Column(verticalArrangement = Arrangement.spacedBy(24.dp)) {
-                            ConnectedChoice(
-                                options = listOf(
-                                    stringResource(R.string.enter_uid),
-                                    stringResource(R.string.scan_card),
-                                ),
-                                selectedIndex = if (scanMode) 1 else 0,
-                                onSelect = { scanMode = it == 1 },
-                            )
-
-                            AnimatedContent(targetState = scanMode, label = "uidSource") { scanning ->
-                                if (scanning) {
-                                    ScanPanel(
-                                        scannedUid = scannedUid,
-                                        error = scanError,
-                                        onScanAgain = {
-                                            scannedUid = null
-                                            scanError = null
-                                        },
-                                    )
-                                } else {
-                                    ManualUidEntry(
-                                        uid = typedUid,
-                                        size = uidSize,
-                                        onSizeChange = { newSize ->
-                                            uidSize = newSize
-                                            typedUid.edit { if (length > newSize * 2) delete(newSize * 2, length) }
-                                        },
-                                    )
-                                }
-                            }
-                        }
+                        ManualUidEntry(
+                            uid = typedUid,
+                            size = uidSize,
+                            onSizeChange = { newSize ->
+                                uidSize = newSize
+                                typedUid.edit { if (length > newSize * 2) delete(newSize * 2, length) }
+                            },
+                            onHide = { uidShown = false },
+                        )
                     } else {
-                        HiddenUid(size = uidSize, onShow = { uidShown = true })
+                        HiddenUid(
+                            size = uidSize,
+                            hasUid = uid != null,
+                            onShow = { uidShown = true },
+                        )
                     }
                 }
             }
         }
+    }
+
+    if (scanning) {
+        ScanDialog(
+            scannedUid = lastScannedUid,
+            error = scanError,
+            onScanAgain = {
+                lastScannedUid = null
+                scanError = null
+            },
+            onDismiss = {
+                scanning = false
+                lastScannedUid = null
+                scanError = null
+            },
+        )
     }
 
     if (card != null && confirmingDelete) {
@@ -271,10 +284,11 @@ fun CardEditorScreen(
     }
 }
 
-/** Stands in for a saved card's UID until the user asks to see it. */
+/** Stands in for a saved or entered UID until the user asks to see it. */
 @Composable
 private fun HiddenUid(
     size: Int,
+    hasUid: Boolean,
     onShow: () -> Unit,
 ) {
     ListItem(
@@ -288,7 +302,7 @@ private fun HiddenUid(
         shapes = ListItemDefaults.shapes(shape = MaterialTheme.shapes.large),
         colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
     ) {
-        Text(stringResource(R.string.uid_size, size))
+        Text(if (hasUid) stringResource(R.string.uid_size, size) else stringResource(R.string.enter_uid))
     }
 }
 
@@ -297,8 +311,24 @@ private fun ManualUidEntry(
     uid: TextFieldState,
     size: Int,
     onSizeChange: (Int) -> Unit,
+    onHide: () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringResource(R.string.enter_uid),
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            TextButton(onClick = onHide, shapes = ButtonDefaults.shapes()) {
+                Text(stringResource(R.string.hide))
+            }
+        }
+
         ConnectedChoice(
             options = UidSizes.map { pluralStringResource(R.plurals.bytes, it, it) },
             selectedIndex = UidSizes.indexOf(size),
@@ -338,37 +368,50 @@ private fun ManualUidEntry(
     }
 }
 
-/** Waits for a card, then confirms the read. The scanned UID is never displayed. */
+/** Dialog that waits for an NFC card, then confirms the read without displaying the raw UID. */
 @Composable
-private fun ScanPanel(
+private fun ScanDialog(
     scannedUid: String?,
     error: String?,
     onScanAgain: () -> Unit,
+    onDismiss: () -> Unit,
 ) {
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .semantics { liveRegion = LiveRegionMode.Polite },
-        shape = MaterialTheme.shapes.extraLarge,
-        color = MaterialTheme.colorScheme.surfaceContainer,
-    ) {
-        AnimatedContent(
-            targetState = scannedUid,
-            contentAlignment = Alignment.Center,
-            label = "scan",
-        ) { uid ->
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = {
+            if (scannedUid == null) {
+                Icon(
+                    painterResource(R.drawable.ic_contactless),
+                    contentDescription = null,
+                    modifier = Modifier.size(32.dp),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .background(MaterialTheme.colorScheme.primary, MaterialShapes.Cookie9Sided.toShape()),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        Icons.Rounded.Check,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                    )
+                }
+            }
+        },
+        title = {
+            Text(stringResource(if (scannedUid == null) R.string.scan_ready else R.string.scan_done))
+        },
+        text = {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    // Fits either state, so the panel keeps its size when the card is read.
-                    .heightIn(min = 264.dp)
-                    .padding(horizontal = 24.dp, vertical = 32.dp),
+                modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                if (uid == null) {
-                    LoadingIndicator(Modifier.size(64.dp))
-                    Text(stringResource(R.string.scan_ready), style = MaterialTheme.typography.titleMedium)
+                if (scannedUid == null) {
+                    LoadingIndicator(Modifier.size(48.dp))
                     Text(
                         text = error ?: stringResource(R.string.scan_instruction),
                         style = MaterialTheme.typography.bodyMedium,
@@ -380,34 +423,32 @@ private fun ScanPanel(
                         textAlign = TextAlign.Center,
                     )
                 } else {
-                    Box(
-                        modifier = Modifier
-                            .size(64.dp)
-                            .background(MaterialTheme.colorScheme.primary, MaterialShapes.Cookie9Sided.toShape()),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            Icons.Rounded.Check,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onPrimary,
-                        )
-                    }
-                    Text(stringResource(R.string.scan_done), style = MaterialTheme.typography.titleMedium)
                     Text(
-                        text = stringResource(R.string.uid_size, uid.length / 2),
+                        text = stringResource(R.string.uid_size, scannedUid.length / 2),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    TextButton(onClick = onScanAgain, shapes = ButtonDefaults.shapes()) {
-                        Text(stringResource(R.string.scan_again))
-                    }
                 }
             }
-        }
-    }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss, shapes = ButtonDefaults.shapes()) {
+                Text(stringResource(if (scannedUid != null) R.string.ok else R.string.cancel))
+            }
+        },
+        dismissButton = if (scannedUid != null) {
+            {
+                TextButton(onClick = onScanAgain, shapes = ButtonDefaults.shapes()) {
+                    Text(stringResource(R.string.scan_again))
+                }
+            }
+        } else {
+            null
+        },
+    )
 }
 
-/** Enables Android's NFC-A reader mode only while the scan panel is waiting for a card. */
+/** Enables Android's NFC-A reader mode only while scanning is active and waiting for a card. */
 @Composable
 private fun NfcUidReader(
     enabled: Boolean,

@@ -22,6 +22,7 @@
     <string name="save">保存</string>
     <string name="uid_hidden">已隐藏</string>
     <string name="show">显示</string>
+    <string name="hide">隐藏</string>
     <string name="delete_card">删除卡片</string>
     <string name="delete_card_title">删除“%1$s”？</string>
     <string name="delete_card_message">这将从列表中移除此卡片。</string>
