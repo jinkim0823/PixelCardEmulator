@@ -1,5 +1,10 @@
 package github.realtvop.pixelcardemulator
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import android.nfc.NfcAdapter
+import android.nfc.NfcManager
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -53,16 +58,18 @@ import androidx.compose.material3.ToggleButtonDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -78,12 +85,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
-import kotlin.random.Random
-import kotlinx.coroutines.delay
 
 private val UidSizes = listOf(4, 7, 10)
 private const val MaxNameLength = 32
-private const val SimulatedScanMillis = 2500L
 
 /** Keeps the form from stretching across unfolded or landscape screens. */
 private val FormMaxWidth = 560.dp
@@ -102,6 +106,7 @@ fun CardEditorScreen(
     var scanMode by rememberSaveable { mutableStateOf(false) }
     var uidSize by rememberSaveable { mutableIntStateOf(card?.uidSize ?: UidSizes.first()) }
     var scannedUid by rememberSaveable { mutableStateOf<String?>(null) }
+    var scanError by rememberSaveable { mutableStateOf<String?>(null) }
     // A saved UID stays hidden until it is asked for; a new card has nothing to hide.
     var uidShown by rememberSaveable { mutableStateOf(card == null) }
     var confirmingDelete by rememberSaveable { mutableStateOf(false) }
@@ -113,14 +118,16 @@ fun CardEditorScreen(
         else -> typedUid.text.toString().takeIf { it.length == uidSize * 2 }
     }
 
-    // Stands in for a real NFC read: a card "arrives" shortly after scanning starts.
-    if (scanMode && scannedUid == null) {
-        LaunchedEffect(Unit) {
-            delay(SimulatedScanMillis)
-            scannedUid = randomUid()
+    NfcUidReader(
+        enabled = scanMode && scannedUid == null,
+        onUid = { uidHex ->
+            scannedUid = uidHex
+            uidSize = uidHex.length / 2
+            scanError = null
             haptics.performHapticFeedback(HapticFeedbackType.Confirm)
-        }
-    }
+        },
+        onError = { scanError = it },
+    )
 
     Scaffold(
         modifier = Modifier.imePadding(),
@@ -210,7 +217,14 @@ fun CardEditorScreen(
 
                             AnimatedContent(targetState = scanMode, label = "uidSource") { scanning ->
                                 if (scanning) {
-                                    ScanPanel(scannedUid = scannedUid, onScanAgain = { scannedUid = null })
+                                    ScanPanel(
+                                        scannedUid = scannedUid,
+                                        error = scanError,
+                                        onScanAgain = {
+                                            scannedUid = null
+                                            scanError = null
+                                        },
+                                    )
                                 } else {
                                     ManualUidEntry(
                                         uid = typedUid,
@@ -328,6 +342,7 @@ private fun ManualUidEntry(
 @Composable
 private fun ScanPanel(
     scannedUid: String?,
+    error: String?,
     onScanAgain: () -> Unit,
 ) {
     Surface(
@@ -355,9 +370,13 @@ private fun ScanPanel(
                     LoadingIndicator(Modifier.size(64.dp))
                     Text(stringResource(R.string.scan_ready), style = MaterialTheme.typography.titleMedium)
                     Text(
-                        text = stringResource(R.string.scan_instruction),
+                        text = error ?: stringResource(R.string.scan_instruction),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = if (error == null) {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        } else {
+                            MaterialTheme.colorScheme.error
+                        },
                         textAlign = TextAlign.Center,
                     )
                 } else {
@@ -386,6 +405,55 @@ private fun ScanPanel(
             }
         }
     }
+}
+
+/** Enables Android's NFC-A reader mode only while the scan panel is waiting for a card. */
+@Composable
+private fun NfcUidReader(
+    enabled: Boolean,
+    onUid: (String) -> Unit,
+    onError: (String) -> Unit,
+) {
+    val context = LocalContext.current
+    val activity = remember(context) { context.findActivity() }
+    val adapter = remember(context) { context.getSystemService(NfcManager::class.java)?.defaultAdapter }
+    val unavailableMessage = stringResource(R.string.nfc_unavailable)
+    val disabledMessage = stringResource(R.string.nfc_disabled)
+    val invalidUidMessage = stringResource(R.string.unsupported_uid_length)
+
+    DisposableEffect(enabled, activity, adapter) {
+        if (!enabled) return@DisposableEffect onDispose {}
+        if (activity == null || adapter == null) {
+            onError(unavailableMessage)
+            return@DisposableEffect onDispose {}
+        }
+        if (!adapter.isEnabled) {
+            onError(disabledMessage)
+            return@DisposableEffect onDispose {}
+        }
+
+        val callback = NfcAdapter.ReaderCallback { tag ->
+            val uid = tag.id
+            activity.runOnUiThread {
+                if (uid.size in SupportedUidSizes) onUid(uid.toHex()) else onError(invalidUidMessage)
+            }
+        }
+        adapter.enableReaderMode(
+            activity,
+            callback,
+            NfcAdapter.FLAG_READER_NFC_A or
+                NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK or
+                NfcAdapter.FLAG_READER_NO_PLATFORM_SOUNDS,
+            null,
+        )
+        onDispose { runCatching { adapter.disableReaderMode(activity) } }
+    }
+}
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
 }
 
 /** A single-choice row of connected toggle buttons. */
@@ -440,9 +508,6 @@ private fun String.toHex() = uppercase().filter { it in "0123456789ABCDEF" }
 private val BytePairs = OutputTransformation {
     for (index in (length - 1) / 2 * 2 downTo 2 step 2) insert(index, " ")
 }
-
-private fun randomUid(): String =
-    Random.nextBytes(UidSizes.random()).joinToString("") { "%02X".format(it) }
 
 @PreviewLightDark
 @Composable

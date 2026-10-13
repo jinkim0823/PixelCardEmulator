@@ -10,7 +10,7 @@ android {
     defaultConfig {
         applicationId = "github.realtvop.pixelcardemulator"
         // Dynamic color needs Android 12, so the theme has no static fallback palette.
-        minSdk = 31
+        minSdk = 35
         targetSdk = 37
         versionCode = 1
         versionName = "0.1"

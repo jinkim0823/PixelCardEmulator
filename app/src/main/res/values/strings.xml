@@ -45,4 +45,7 @@
     <string name="scan_done">Card read</string>
     <string name="uid_size">%d-byte UID</string>
     <string name="scan_again">Scan again</string>
+    <string name="nfc_unavailable">This device does not have NFC.</string>
+    <string name="nfc_disabled">Turn on NFC to scan a card.</string>
+    <string name="unsupported_uid_length">Only 4, 7, or 10-byte NFC-A UIDs are supported.</string>
 </resources>
