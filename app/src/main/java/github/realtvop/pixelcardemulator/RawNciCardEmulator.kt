@@ -5,6 +5,7 @@ import android.content.Context
 import android.nfc.NfcAdapter
 import android.nfc.NfcManager
 import android.os.Build
+import androidx.annotation.StringRes
 import java.lang.ref.WeakReference
 import java.lang.reflect.Proxy
 import java.util.concurrent.CountDownLatch
@@ -78,11 +79,11 @@ internal enum class RawProfile(
     CtsType4A(0x06, 0x0C, 0x20, 0x40),
 }
 
-internal class RawNciCardEmulator(context: Context) : NfcCardEmulationBackend {
+internal class RawNciCardEmulator(private val context: Context) : NfcCardEmulationBackend {
     private val preferences = context.getSharedPreferences(RawPreferences, Context.MODE_PRIVATE)
     private val adapter = context.getSystemService(NfcManager::class.java)?.defaultAdapter
-    private val transport = RawNciTransport(adapter)
-    private val pollingControl = PollingControl(adapter)
+    private val transport = RawNciTransport(context, adapter)
+    private val pollingControl = PollingControl(context, adapter)
 
     override val isSupported: Boolean
         get() = transport.isSupported
@@ -103,21 +104,23 @@ internal class RawNciCardEmulator(context: Context) : NfcCardEmulationBackend {
         } else {
             pollingControl.withPaused { readCompleteSnapshot() }.also(::savePendingSnapshot)
         }
-        check(original.keys.containsAll(RequiredSnapshotParameters)) { "The saved NFC snapshot is incomplete" }
+        check(original.keys.containsAll(RequiredSnapshotParameters)) {
+            context.getString(R.string.raw_snapshot_incomplete)
+        }
 
         val profile = RawNfcDeviceCatalog.profile
         pollingControl.withPaused {
             setPreferredConfiguration(uid, profile)
-            requireUid(uid, "The NFC controller did not retain the UID")
+            requireUid(uid, R.string.raw_uid_not_retained)
         }
 
         if (!uidMatches(uid)) {
             pollingControl.withPaused {
                 setPreferredConfiguration(uid, profile)
                 Thread.sleep(120)
-                requireUid(uid, "The NFC controller overwrote the UID after polling resumed")
+                requireUid(uid, R.string.raw_uid_overwritten_after_resume)
             }
-            requireUid(uid, "The NFC controller overwrote the UID after replay")
+            requireUid(uid, R.string.raw_uid_overwritten_after_replay)
         }
     }
 
@@ -127,7 +130,7 @@ internal class RawNciCardEmulator(context: Context) : NfcCardEmulationBackend {
         pollingControl.withPaused {
             if (snapshot != null) {
                 setConfig(snapshot.entries.map { it.key to it.value })
-                requireUid(snapshot.getValue(LaNfcid1), "The NFC controller did not restore its original UID")
+                requireUid(snapshot.getValue(LaNfcid1), R.string.raw_uid_not_restored)
             } else {
                 setConfig(
                     listOf(
@@ -143,9 +146,9 @@ internal class RawNciCardEmulator(context: Context) : NfcCardEmulationBackend {
             pollingControl.withPaused {
                 setConfig(snapshot.entries.map { it.key to it.value })
                 Thread.sleep(120)
-                requireUid(snapshot.getValue(LaNfcid1), "The original UID was lost after polling resumed")
+                requireUid(snapshot.getValue(LaNfcid1), R.string.raw_original_uid_lost_after_resume)
             }
-            requireUid(snapshot.getValue(LaNfcid1), "The original UID was not retained after restore replay")
+            requireUid(snapshot.getValue(LaNfcid1), R.string.raw_original_uid_not_retained_after_replay)
         }
         clearPendingSnapshot()
     }
@@ -167,7 +170,7 @@ internal class RawNciCardEmulator(context: Context) : NfcCardEmulationBackend {
         if (RawNfcDeviceCatalog.prefersUidOnly) {
             val uidOnlyWorked = runCatching {
                 setConfig(listOf(LaNfcid1 to uid))
-                requireUid(uid, "UID-only configuration was not retained")
+                requireUid(uid, R.string.raw_uid_only_not_retained)
             }.isSuccess
             if (uidOnlyWorked) return
         }
@@ -184,9 +187,8 @@ internal class RawNciCardEmulator(context: Context) : NfcCardEmulationBackend {
         }
         val missing = RequiredSnapshotParameters.filterNot(values::containsKey)
         if (missing.isNotEmpty()) {
-            throw NfcEmulationException(
-                "Could not snapshot NFC parameters: ${missing.joinToString { "0x%02X".format(it) }}",
-            )
+            val parameters = missing.joinToString { "0x%02X".format(it) }
+            throw NfcEmulationException(context.getString(R.string.raw_snapshot_parameters_missing, parameters))
         }
         return values
     }
@@ -204,32 +206,36 @@ internal class RawNciCardEmulator(context: Context) : NfcCardEmulationBackend {
         }
         val response = transport.command(CoreSetConfig, payload)
         val status = response.firstOrNull()?.toInt()?.and(0xFF)
-            ?: throw NfcEmulationException("The NFC controller returned an empty SET_CONFIG response")
+            ?: throw NfcEmulationException(context.getString(R.string.raw_set_config_empty))
         if (status != 0) {
             val rejected = if (response.size >= 2) {
                 response.drop(2).joinToString { "0x%02X".format(it.toInt() and 0xFF) }
             } else {
-                "unknown parameters"
+                context.getString(R.string.raw_unknown_parameters)
             }
-            throw NfcEmulationException("NFC SET_CONFIG failed with 0x%02X ($rejected)".format(status))
+            throw NfcEmulationException(context.getString(R.string.raw_set_config_failed, status, rejected))
         }
     }
 
     private fun getConfig(ids: List<Int>): Map<Int, ByteArray> {
         val request = byteArrayOf(ids.size.toByte(), *ids.map(Int::toByte).toByteArray())
         val response = transport.command(CoreGetConfig, request)
-        if (response.size < 2) throw NfcEmulationException("Malformed NFC GET_CONFIG response")
+        if (response.size < 2) throw NfcEmulationException(context.getString(R.string.raw_get_config_malformed))
         val status = response[0].toInt() and 0xFF
-        if (status != 0) throw NfcEmulationException("NFC GET_CONFIG failed with 0x%02X".format(status))
+        if (status != 0) throw NfcEmulationException(context.getString(R.string.raw_get_config_failed, status))
 
         val count = response[1].toInt() and 0xFF
         var offset = 2
         return buildMap {
             repeat(count) {
-                if (offset + 2 > response.size) throw NfcEmulationException("Truncated NFC configuration")
+                if (offset + 2 > response.size) {
+                    throw NfcEmulationException(context.getString(R.string.raw_config_truncated))
+                }
                 val id = response[offset++].toInt() and 0xFF
                 val length = response[offset++].toInt() and 0xFF
-                if (offset + length > response.size) throw NfcEmulationException("Truncated NFC parameter 0x%02X".format(id))
+                if (offset + length > response.size) {
+                    throw NfcEmulationException(context.getString(R.string.raw_parameter_truncated, id))
+                }
                 put(id, response.copyOfRange(offset, offset + length))
                 offset += length
             }
@@ -239,8 +245,8 @@ internal class RawNciCardEmulator(context: Context) : NfcCardEmulationBackend {
     private fun uidMatches(uid: ByteArray): Boolean =
         runCatching { getConfig(listOf(LaNfcid1))[LaNfcid1]?.contentEquals(uid) == true }.getOrDefault(false)
 
-    private fun requireUid(uid: ByteArray, message: String) {
-        if (!uidMatches(uid)) throw NfcEmulationException(message)
+    private fun requireUid(uid: ByteArray, @StringRes messageRes: Int) {
+        if (!uidMatches(uid)) throw NfcEmulationException(context.getString(messageRes))
     }
 
     private fun savePendingSnapshot(snapshot: Map<Int, ByteArray>) {
@@ -252,7 +258,7 @@ internal class RawNciCardEmulator(context: Context) : NfcCardEmulationBackend {
                 .putString(RawSnapshotKey, serialized)
                 .putBoolean(RawRestorePendingKey, true)
                 .commit(),
-        ) { "Could not save the NFC restore snapshot" }
+        ) { context.getString(R.string.raw_snapshot_save_failed) }
     }
 
     private fun loadSnapshot(): Map<Int, ByteArray> {
@@ -269,16 +275,16 @@ internal class RawNciCardEmulator(context: Context) : NfcCardEmulationBackend {
                 .remove(RawSnapshotKey)
                 .putBoolean(RawRestorePendingKey, false)
                 .commit(),
-        ) { "Could not clear the NFC restore snapshot" }
+        ) { context.getString(R.string.raw_snapshot_clear_failed) }
     }
 
     private fun ensureNfcEnabled() {
-        if (adapter == null) throw NfcEmulationException("This device does not have NFC")
-        if (!adapter.isEnabled) throw NfcEmulationException("Turn on NFC before activating a card")
+        if (adapter == null) throw NfcEmulationException(context.getString(R.string.nfc_unavailable))
+        if (!adapter.isEnabled) throw NfcEmulationException(context.getString(R.string.nfc_turn_on_to_activate))
     }
 }
 
-private class RawNciTransport(private val adapter: NfcAdapter?) {
+private class RawNciTransport(private val context: Context, private val adapter: NfcAdapter?) {
     private val callbackType by lazy { Class.forName("android.nfc.NfcAdapter\$NfcVendorNciCallback") }
 
     val isSupported: Boolean
@@ -292,7 +298,7 @@ private class RawNciTransport(private val adapter: NfcAdapter?) {
         }.isSuccess
 
     fun command(oid: Int, payload: ByteArray): ByteArray {
-        val nfcAdapter = adapter ?: throw NfcEmulationException("This device does not have NFC")
+        val nfcAdapter = adapter ?: throw NfcEmulationException(context.getString(R.string.nfc_unavailable))
         try {
             val register = findMethod(
                 NfcAdapter::class.java,
@@ -341,24 +347,24 @@ private class RawNciTransport(private val adapter: NfcAdapter?) {
                     payload,
                 ) as? Int
                 if (frameworkStatus != 0) {
-                    throw NfcEmulationException("NFC framework rejected the command with status $frameworkStatus")
+                    throw NfcEmulationException(context.getString(R.string.raw_framework_rejected, frameworkStatus))
                 }
                 if (!latch.await(ResponseTimeoutSeconds, TimeUnit.SECONDS)) {
-                    throw NfcEmulationException("Timed out waiting for the NFC controller")
+                    throw NfcEmulationException(context.getString(R.string.raw_timeout))
                 }
-                return response.get() ?: throw NfcEmulationException("The NFC controller returned no response")
+                return response.get() ?: throw NfcEmulationException(context.getString(R.string.raw_no_response))
             } finally {
                 runCatching { unregister.invoke(nfcAdapter, callback) }
             }
         } catch (error: NfcEmulationException) {
             throw error
         } catch (error: Throwable) {
-            throw NfcEmulationException("Raw NFC communication failed", error)
+            throw NfcEmulationException(context.getString(R.string.raw_communication_failed), error)
         }
     }
 }
 
-private class PollingControl(private val adapter: NfcAdapter?) {
+private class PollingControl(private val context: Context, private val adapter: NfcAdapter?) {
     private var activity = WeakReference<Activity>(null)
 
     fun setActivity(value: Activity?) {
@@ -375,7 +381,7 @@ private class PollingControl(private val adapter: NfcAdapter?) {
     }
 
     private fun pause(): () -> Unit {
-        val nfcAdapter = adapter ?: throw NfcEmulationException("This device does not have NFC")
+        val nfcAdapter = adapter ?: throw NfcEmulationException(context.getString(R.string.nfc_unavailable))
         if (RawNfcDeviceCatalog.prefersDiscoveryTechnology) return pauseWithDiscoveryTechnology(nfcAdapter)
 
         runCatching {
@@ -390,16 +396,16 @@ private class PollingControl(private val adapter: NfcAdapter?) {
         if (RawNfcDeviceCatalog.allowsDiscoveryTechnologyFallback) {
             return pauseWithDiscoveryTechnology(nfcAdapter)
         }
-        throw NfcEmulationException("No safe polling pause API is available on this device")
+        throw NfcEmulationException(context.getString(R.string.raw_no_pause_api))
     }
 
     private fun pauseWithDiscoveryTechnology(nfcAdapter: NfcAdapter): () -> Unit {
         val foregroundActivity = activity.get()
-            ?: throw NfcEmulationException("A foreground activity is required for raw NFC access")
+            ?: throw NfcEmulationException(context.getString(R.string.raw_foreground_activity_required))
         val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2)
         while (!foregroundActivity.hasWindowFocus() && System.nanoTime() < deadline) Thread.sleep(50)
         if (!foregroundActivity.hasWindowFocus()) {
-            throw NfcEmulationException("The app must be in the foreground for raw NFC access")
+            throw NfcEmulationException(context.getString(R.string.raw_app_not_foreground))
         }
         val set = findMethod(
             NfcAdapter::class.java,
@@ -415,7 +421,7 @@ private class PollingControl(private val adapter: NfcAdapter?) {
 
     private fun checkPauseStatus(value: Any?) {
         if (value is Int && value !in setOf(1, 2)) {
-            throw NfcEmulationException("NFC polling state change failed with status $value")
+            throw NfcEmulationException(context.getString(R.string.raw_polling_state_failed, value))
         }
     }
 }

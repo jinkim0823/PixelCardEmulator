@@ -54,4 +54,48 @@
     <string name="raw_nci_mode">Raw NCI mode</string>
     <string name="enabled">Enabled</string>
     <string name="set_up">Set up</string>
+
+    <!-- Emulation status and errors shown in the list and in dialogs -->
+    <string name="status_activating">Activating %1$s…</string>
+    <string name="status_restoring">Restoring NFC defaults…</string>
+    <string name="status_recovering">Recovering NFC after restart…</string>
+    <string name="uid_emulation_unsupported">UID emulation is not supported by this NFC system.</string>
+    <string name="nfc_turn_on_to_activate">Turn on NFC before activating a card.</string>
+    <string name="controller_rejected_profile">The NFC controller rejected this card profile.</string>
+    <string name="controller_no_uid_emulation">This NFC controller does not expose UID emulation.</string>
+    <string name="raw_consent_required">Raw NFC access has not been approved for this firmware.</string>
+    <string name="recovery_route_save_failed">Could not save the NFC recovery route.</string>
+    <string name="recovery_route_clear_failed">Could not clear the NFC recovery route.</string>
+    <string name="oem_extension_unavailable">The NFC OEM extension is unavailable.</string>
+    <string name="oem_service_rejected">The NFC system service rejected the request.</string>
+    <string name="oem_service_no_status">The NFC system service returned no status.</string>
+    <string name="oem_unknown_status">Unknown NFC OEM status %1$d.</string>
+
+    <!-- Raw NCI errors, shown when the NFC controller is driven directly -->
+    <string name="raw_snapshot_incomplete">The saved NFC snapshot is incomplete.</string>
+    <string name="raw_snapshot_save_failed">Could not save the NFC restore snapshot.</string>
+    <string name="raw_snapshot_clear_failed">Could not clear the NFC restore snapshot.</string>
+    <string name="raw_snapshot_parameters_missing">Could not snapshot NFC parameters: %1$s.</string>
+    <string name="raw_uid_not_retained">The NFC controller did not retain the UID.</string>
+    <string name="raw_uid_overwritten_after_resume">The NFC controller overwrote the UID after polling resumed.</string>
+    <string name="raw_uid_overwritten_after_replay">The NFC controller overwrote the UID after replay.</string>
+    <string name="raw_uid_not_restored">The NFC controller did not restore its original UID.</string>
+    <string name="raw_original_uid_lost_after_resume">The original UID was lost after polling resumed.</string>
+    <string name="raw_original_uid_not_retained_after_replay">The original UID was not retained after restore replay.</string>
+    <string name="raw_uid_only_not_retained">UID-only configuration was not retained.</string>
+    <string name="raw_set_config_empty">The NFC controller returned an empty SET_CONFIG response.</string>
+    <string name="raw_set_config_failed">NFC SET_CONFIG failed with 0x%1$02X (%2$s).</string>
+    <string name="raw_unknown_parameters">unknown parameters</string>
+    <string name="raw_get_config_malformed">Malformed NFC GET_CONFIG response.</string>
+    <string name="raw_get_config_failed">NFC GET_CONFIG failed with 0x%1$02X.</string>
+    <string name="raw_config_truncated">Truncated NFC configuration.</string>
+    <string name="raw_parameter_truncated">Truncated NFC parameter 0x%1$02X.</string>
+    <string name="raw_framework_rejected">NFC framework rejected the command with status %1$d.</string>
+    <string name="raw_timeout">Timed out waiting for the NFC controller.</string>
+    <string name="raw_no_response">The NFC controller returned no response.</string>
+    <string name="raw_communication_failed">Raw NFC communication failed.</string>
+    <string name="raw_no_pause_api">No safe polling pause API is available on this device.</string>
+    <string name="raw_foreground_activity_required">A foreground activity is required for raw NFC access.</string>
+    <string name="raw_app_not_foreground">The app must be in the foreground for raw NFC access.</string>
+    <string name="raw_polling_state_failed">NFC polling state change failed with status %1$d.</string>
 </resources>

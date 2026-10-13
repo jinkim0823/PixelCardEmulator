@@ -1,0 +1,99 @@
+<resources>
+    <string name="app_name">卡片模拟器</string>
+
+    <!-- Card list -->
+    <string name="cards">卡片</string>
+    <string name="tap_to_activate">点按卡片即可激活</string>
+    <string name="add_card">添加卡片</string>
+    <string name="active">已激活</string>
+    <string name="default_card">默认</string>
+    <string name="edit">编辑</string>
+
+    <!-- Add or edit card -->
+    <string name="back">返回</string>
+    <string name="edit_card">编辑卡片</string>
+    <string name="save">保存</string>
+    <string name="uid_hidden">已隐藏</string>
+    <string name="show">显示</string>
+    <string name="delete_card">删除卡片</string>
+    <string name="delete_card_title">删除“%1$s”？</string>
+    <string name="delete_card_message">这将从列表中移除此卡片。</string>
+    <string name="delete">删除</string>
+    <string name="cancel">取消</string>
+    <string name="name">名称</string>
+    <string name="enter_uid">输入 UID</string>
+    <string name="scan_card">扫描卡片</string>
+    <plurals name="bytes">
+        <item quantity="other">%d 字节</item>
+    </plurals>
+    <string name="uid_hex">UID（十六进制）</string>
+    <!-- The quantity is the UID size (%2$d), not the progress so far. -->
+    <plurals name="uid_progress">
+        <item quantity="other">%1$d / %2$d 字节</item>
+    </plurals>
+    <string name="uid_complete">UID 已完成</string>
+    <string name="scan_ready">准备扫描</string>
+    <string name="scan_instruction">将卡片贴近手机背面。</string>
+    <string name="scan_done">已读取卡片</string>
+    <string name="uid_size">%d 字节 UID</string>
+    <string name="scan_again">重新扫描</string>
+    <string name="nfc_unavailable">此设备不支持 NFC。</string>
+    <string name="nfc_disabled">请开启 NFC 以扫描卡片。</string>
+    <string name="unsupported_uid_length">仅支持 4、7 或 10 字节的 NFC-A UID。</string>
+    <string name="permission_required">需要 ADB 权限</string>
+    <string name="permission_explanation">UID 模拟需要修改 NFC 控制器设置，因此需要授予一次开发者权限。本应用仅模拟 UID，不模拟卡片数据。\n\n请运行：\n%1$s</string>
+    <string name="copy_command">复制命令</string>
+    <string name="nfc_operation_failed">NFC 操作失败</string>
+    <string name="ok">确定</string>
+    <string name="experimental_raw_title">实验性 NFC 访问</string>
+    <string name="experimental_raw_message">此设备上不提供官方 UID 模拟接口。备用方案会直接写入 NFC 控制器参数。卡片停用或应用重启时，将恢复已保存的快照，但此固件尚未经过验证。此次同意仅适用于当前固件版本。</string>
+    <string name="continue_action">继续</string>
+    <string name="more_options">更多选项</string>
+    <string name="raw_nci_mode">原始 NCI 模式</string>
+    <string name="enabled">已启用</string>
+    <string name="set_up">设置</string>
+
+    <!-- Emulation status and errors shown in the list and in dialogs -->
+    <string name="status_activating">正在激活 %1$s…</string>
+    <string name="status_restoring">正在恢复 NFC 默认设置…</string>
+    <string name="status_recovering">重启后正在恢复 NFC…</string>
+    <string name="uid_emulation_unsupported">此 NFC 系统不支持 UID 模拟。</string>
+    <string name="nfc_turn_on_to_activate">激活卡片前请先开启 NFC。</string>
+    <string name="controller_rejected_profile">NFC 控制器拒绝了此卡片配置。</string>
+    <string name="controller_no_uid_emulation">此 NFC 控制器不支持 UID 模拟。</string>
+    <string name="raw_consent_required">此固件尚未获准使用原始 NFC 访问。</string>
+    <string name="recovery_route_save_failed">无法保存 NFC 恢复路径。</string>
+    <string name="recovery_route_clear_failed">无法清除 NFC 恢复路径。</string>
+    <string name="oem_extension_unavailable">NFC 厂商扩展不可用。</string>
+    <string name="oem_service_rejected">NFC 系统服务拒绝了该请求。</string>
+    <string name="oem_service_no_status">NFC 系统服务未返回状态。</string>
+    <string name="oem_unknown_status">未知的 NFC 厂商状态码 %1$d。</string>
+
+    <!-- Raw NCI errors, shown when the NFC controller is driven directly -->
+    <string name="raw_snapshot_incomplete">已保存的 NFC 快照不完整。</string>
+    <string name="raw_snapshot_save_failed">无法保存 NFC 恢复快照。</string>
+    <string name="raw_snapshot_clear_failed">无法清除 NFC 恢复快照。</string>
+    <string name="raw_snapshot_parameters_missing">无法获取 NFC 参数快照：%1$s。</string>
+    <string name="raw_uid_not_retained">NFC 控制器未保留 UID。</string>
+    <string name="raw_uid_overwritten_after_resume">恢复轮询后，NFC 控制器覆盖了 UID。</string>
+    <string name="raw_uid_overwritten_after_replay">重新写入参数后，NFC 控制器覆盖了 UID。</string>
+    <string name="raw_uid_not_restored">NFC 控制器未能恢复原始 UID。</string>
+    <string name="raw_original_uid_lost_after_resume">恢复轮询后，原始 UID 丢失。</string>
+    <string name="raw_original_uid_not_retained_after_replay">重新写入恢复参数后，未保留原始 UID。</string>
+    <string name="raw_uid_only_not_retained">仅 UID 的配置未被保留。</string>
+    <string name="raw_set_config_empty">NFC 控制器返回了空的 SET_CONFIG 响应。</string>
+    <string name="raw_set_config_failed">NFC SET_CONFIG 失败，状态码 0x%1$02X（%2$s）。</string>
+    <string name="raw_unknown_parameters">未知参数</string>
+    <string name="raw_get_config_malformed">NFC GET_CONFIG 响应格式错误。</string>
+    <string name="raw_get_config_failed">NFC GET_CONFIG 失败，状态码 0x%1$02X。</string>
+    <string name="raw_config_truncated">NFC 配置数据不完整。</string>
+    <string name="raw_parameter_truncated">NFC 参数 0x%1$02X 数据不完整。</string>
+    <string name="raw_framework_rejected">NFC 系统框架拒绝了该命令，状态码 %1$d。</string>
+    <string name="raw_timeout">等待 NFC 控制器响应超时。</string>
+    <string name="raw_no_response">NFC 控制器未返回响应。</string>
+    <string name="raw_communication_failed">原始 NFC 通信失败。</string>
+    <string name="raw_no_pause_api">此设备没有可安全使用的轮询暂停接口。</string>
+    <string name="raw_foreground_activity_required">原始 NFC 访问需要前台界面。</string>
+    <string name="raw_app_not_foreground">原始 NFC 访问需要应用位于前台。</string>
+    <string name="raw_polling_state_failed">NFC 轮询状态切换失败，状态码 %1$d。</string>
+</resources>

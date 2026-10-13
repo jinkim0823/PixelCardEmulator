@@ -5,6 +5,7 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Handler
 import android.os.Looper
+import androidx.annotation.StringRes
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -208,7 +209,7 @@ class CardsViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
         if (!emulator.isSupported) {
-            emulatorUiState = EmulatorUiState(error = "UID emulation is not supported by this NFC system")
+            emulatorUiState = EmulatorUiState(error = localized(R.string.uid_emulation_unsupported))
             pendingAction = null
             return
         }
@@ -220,9 +221,9 @@ class CardsViewModel(application: Application) : AndroidViewModel(application) {
         emulatorUiState = EmulatorUiState(
             busy = true,
             status = when (action) {
-                is PendingAction.Activate -> "Activating ${action.card.name}…"
-                is PendingAction.Deactivate -> "Restoring NFC defaults…"
-                PendingAction.RestoreAfterRestart -> "Recovering NFC after restart…"
+                is PendingAction.Activate -> localized(R.string.status_activating, action.card.name)
+                is PendingAction.Deactivate -> localized(R.string.status_restoring)
+                PendingAction.RestoreAfterRestart -> localized(R.string.status_recovering)
             },
         )
         executor.execute { executeAction(action) }
@@ -256,7 +257,7 @@ class CardsViewModel(application: Application) : AndroidViewModel(application) {
                 if (error is ExperimentalRawConsentRequiredException) {
                     emulatorUiState = EmulatorUiState(experimentalRawConfirmationRequired = true)
                 } else {
-                    emulatorUiState = EmulatorUiState(error = error.message ?: "NFC operation failed")
+                    emulatorUiState = EmulatorUiState(error = error.message ?: localized(R.string.nfc_operation_failed))
                     pendingAction = null
                 }
             }
@@ -301,4 +302,7 @@ class CardsViewModel(application: Application) : AndroidViewModel(application) {
     private fun hasSecureSettingsPermission(): Boolean =
         getApplication<Application>().checkSelfPermission(Manifest.permission.WRITE_SECURE_SETTINGS) ==
             PackageManager.PERMISSION_GRANTED
+
+    private fun localized(@StringRes id: Int, vararg args: Any): String =
+        getApplication<Application>().getString(id, *args)
 }

@@ -7,9 +7,7 @@ import android.os.Build
 import java.lang.reflect.Method
 
 open class NfcEmulationException(message: String, cause: Throwable? = null) : Exception(message, cause)
-class ExperimentalRawConsentRequiredException : NfcEmulationException(
-    "Raw NFC access has not been approved for this firmware",
-)
+class ExperimentalRawConsentRequiredException(message: String) : NfcEmulationException(message)
 
 private const val CoordinatorPreferences = "nfc_emulation_state"
 private const val ActiveBackendKey = "active_backend"
@@ -23,7 +21,7 @@ internal interface NfcCardEmulationBackend {
 }
 
 /** Android 15+'s system-service implementation of NFC-A identity emulation. */
-private class OemNfcCardEmulator(context: Context) : NfcCardEmulationBackend {
+private class OemNfcCardEmulator(private val context: Context) : NfcCardEmulationBackend {
     private val adapter: NfcAdapter? = context.getSystemService(NfcManager::class.java)?.defaultAdapter
 
     override val isSupported: Boolean
@@ -56,15 +54,15 @@ private class OemNfcCardEmulator(context: Context) : NfcCardEmulationBackend {
     }
 
     private fun resolveApi(requireEnabled: Boolean = true): Api {
-        val nfcAdapter = adapter ?: throw NfcEmulationException("This device does not have NFC")
+        val nfcAdapter = adapter ?: throw NfcEmulationException(context.getString(R.string.nfc_unavailable))
         if (requireEnabled && !nfcAdapter.isEnabled) {
-            throw NfcEmulationException("Turn on NFC before activating a card")
+            throw NfcEmulationException(context.getString(R.string.nfc_turn_on_to_activate))
         }
 
         try {
             val getExtension = findMethod(NfcAdapter::class.java, "getNfcOemExtension")
             val extension = getExtension.invoke(nfcAdapter)
-                ?: throw NfcEmulationException("The NFC OEM extension is unavailable")
+                ?: throw NfcEmulationException(context.getString(R.string.oem_extension_unavailable))
             val emulate = findMethod(
                 extension.javaClass,
                 "emulateNfcTechnologyATag",
@@ -80,7 +78,7 @@ private class OemNfcCardEmulator(context: Context) : NfcCardEmulationBackend {
         } catch (error: NfcEmulationException) {
             throw error
         } catch (error: Throwable) {
-            throw NfcEmulationException("This NFC controller does not expose UID emulation", error)
+            throw NfcEmulationException(context.getString(R.string.controller_no_uid_emulation), error)
         }
     }
 
@@ -105,15 +103,15 @@ private class OemNfcCardEmulator(context: Context) : NfcCardEmulationBackend {
                 null,
             ) as? Int
         } catch (error: Throwable) {
-            throw NfcEmulationException("The NFC system service rejected the request", error)
+            throw NfcEmulationException(context.getString(R.string.oem_service_rejected), error)
         }
 
         when (status) {
             0 -> Unit
-            1 -> throw NfcEmulationException("Turn on NFC before activating a card")
-            2 -> throw NfcEmulationException("The NFC controller rejected this card profile")
-            null -> throw NfcEmulationException("The NFC system service returned no status")
-            else -> throw NfcEmulationException("Unknown NFC OEM status $status")
+            1 -> throw NfcEmulationException(context.getString(R.string.nfc_turn_on_to_activate))
+            2 -> throw NfcEmulationException(context.getString(R.string.controller_rejected_profile))
+            null -> throw NfcEmulationException(context.getString(R.string.oem_service_no_status))
+            else -> throw NfcEmulationException(context.getString(R.string.oem_unknown_status, status))
         }
     }
 
@@ -121,7 +119,7 @@ private class OemNfcCardEmulator(context: Context) : NfcCardEmulationBackend {
 }
 
 /** Chooses the official system route first and retains the chosen backend until restore. */
-class NfcEmulationCoordinator(context: Context) {
+class NfcEmulationCoordinator(private val context: Context) {
     private val preferences = context.getSharedPreferences(CoordinatorPreferences, Context.MODE_PRIVATE)
     private val oem = OemNfcCardEmulator(context)
     private val raw = RawNciCardEmulator(context)
@@ -164,7 +162,7 @@ class NfcEmulationCoordinator(context: Context) {
             else -> selectBackend()
         }
         check(preferences.edit().putString(ActiveBackendKey, name).commit()) {
-            "Could not save NFC recovery route"
+            context.getString(R.string.recovery_route_save_failed)
         }
         backend.activate(uid)
     }
@@ -177,7 +175,7 @@ class NfcEmulationCoordinator(context: Context) {
         }
         backend.deactivate()
         check(preferences.edit().remove(ActiveBackendKey).commit()) {
-            "Could not clear NFC recovery route"
+            context.getString(R.string.recovery_route_clear_failed)
         }
     }
 
@@ -186,9 +184,9 @@ class NfcEmulationCoordinator(context: Context) {
             return "raw" to raw
         }
         if (oem.isSupported && !forceRaw) return "oem" to oem
-        if (!raw.isSupported) throw NfcEmulationException("UID emulation is not supported by this NFC system")
+        if (!raw.isSupported) throw NfcEmulationException(context.getString(R.string.uid_emulation_unsupported))
         if (!RawNfcDeviceCatalog.isAllowlisted && requiresExperimentalRawConsent) {
-            throw ExperimentalRawConsentRequiredException()
+            throw ExperimentalRawConsentRequiredException(context.getString(R.string.raw_consent_required))
         }
         return "raw" to raw
     }
