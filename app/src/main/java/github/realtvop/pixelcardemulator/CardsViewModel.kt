@@ -66,7 +66,12 @@ class CardsViewModel(application: Application) : AndroidViewModel(application) {
     var defaultId by mutableStateOf(store.loadDefaultCardId().takeIf { id -> cards.any { it.id == id } })
         private set
 
-    var emulatorUiState by mutableStateOf(EmulatorUiState())
+    var emulatorUiState by mutableStateOf(
+        EmulatorUiState(
+            permissionRequired = application.checkSelfPermission(Manifest.permission.WRITE_SECURE_SETTINGS) !=
+                PackageManager.PERMISSION_GRANTED,
+        ),
+    )
         private set
 
     var forceRaw by mutableStateOf(emulator.forceRaw)
@@ -131,10 +136,11 @@ class CardsViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun refreshPermission() {
-        if (hasSecureSettingsPermission() && pendingAction != null && !emulatorUiState.busy) {
+        if (!hasSecureSettingsPermission()) return
+        if (emulatorUiState.permissionRequired) {
             emulatorUiState = emulatorUiState.copy(permissionRequired = false)
-            pendingAction?.let(::runAction)
         }
+        if (pendingAction != null && !emulatorUiState.busy) pendingAction?.let(::runAction)
     }
 
     fun attachActivity(activity: android.app.Activity) {
@@ -150,7 +156,6 @@ class CardsViewModel(application: Application) : AndroidViewModel(application) {
 
     fun dismissPermissionPrompt() {
         emulatorUiState = emulatorUiState.copy(permissionRequired = false)
-        pendingAction = null
     }
 
     fun confirmExperimentalRaw() {
