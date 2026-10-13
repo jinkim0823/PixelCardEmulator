@@ -1,9 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.NFC" />
-    <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" />
+    <uses-permission
+        android:name="android.permission.WRITE_SECURE_SETTINGS"
+        tools:ignore="ProtectedPermissions" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+    <uses-permission android:name="moe.shizuku.manager.permission.API_V23" />
     <uses-feature android:name="android.hardware.nfc" android:required="true" />
+
+    <queries>
+        <package android:name="moe.shizuku.privileged.api" />
+    </queries>
 
     <application
         android:icon="@mipmap/ic_launcher"
@@ -19,6 +34,10 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <service
+            android:name=".WirelessDebuggingService"
+            android:exported="false"
+            android:foregroundServiceType="connectedDevice" />
     </application>
 
 </manifest>

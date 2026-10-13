@@ -6,6 +6,9 @@ activityCompose = "1.13.0"
 composeBom = "2026.09.00"
 # The BOM still pins Material 3 to 1.4.0, which predates the Expressive components.
 composeMaterial3 = "1.5.0-beta01"
+conscrypt = "2.5.3"
+libadbAndroid = "3.1.1"
+shizuku = "13.1.5"
 
 [libraries]
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }
@@ -14,6 +17,10 @@ compose-material-icons-core = { module = "androidx.compose.material:material-ico
 compose-material3 = { module = "androidx.compose.material3:material3", version.ref = "composeMaterial3" }
 compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling" }
 compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
+conscrypt-android = { module = "org.conscrypt:conscrypt-android", version.ref = "conscrypt" }
+libadb-android = { module = "com.github.MuntashirAkon:libadb-android", version.ref = "libadbAndroid" }
+shizuku-api = { module = "dev.rikka.shizuku:api", version.ref = "shizuku" }
+shizuku-provider = { module = "dev.rikka.shizuku:provider", version.ref = "shizuku" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

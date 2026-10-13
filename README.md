@@ -14,7 +14,7 @@ English | [简体中文](README.zh-CN.md)
 
 ## Features
 
-- **No Root Required**: Needs only a one-time ADB permission (`WRITE_SECURE_SETTINGS`).
+- **No Root Required**: Grants the one-time `WRITE_SECURE_SETTINGS` permission through Shizuku, on-device wireless debugging, or computer ADB.
 - **Dual Emulation Backends**:
   - **OEM Extension (Android 15+)**: Uses platform `NfcOemExtension.emulateNfcTechnologyATag`.
   - **Raw NCI Fallback**: Direct controller communication via vendor NCI commands with automatic parameter snapshot and restore.
@@ -27,14 +27,17 @@ English | [简体中文](README.zh-CN.md)
 ## Requirements
 
 - **Device**: Google Pixel running **Android 15+** (or compatible Samsung / OnePlus / Sony devices via Raw NCI).
-- **Permission**: `android.permission.WRITE_SECURE_SETTINGS` (granted via ADB once).
+- **Permission**: `android.permission.WRITE_SECURE_SETTINGS` (granted once through one of the setup methods below).
 
 ---
 
 ## Setup
 
 1. Install the APK.
-2. Grant the required permission via ADB (or Shizuku / LADB):
+2. Open the app and choose one permission setup method:
+   - **Shizuku**: Start Shizuku, tap **Grant with Shizuku**, and approve the request.
+   - **Wireless debugging**: Tap **Grant with wireless debugging**. In Developer options, open **Wireless debugging** → **Pair device with pairing code**, then enter the code from the setup notification.
+   - **Computer ADB**: Run:
    ```bash
    adb shell pm grant io.github.realtvop.pixelcardemulator android.permission.WRITE_SECURE_SETTINGS
    ```
@@ -46,9 +49,9 @@ English | [简体中文](README.zh-CN.md)
 
 - **UID Only**: Emulates only the ISO 14443-A UID (`NFCID1`). Does **not** emulate encrypted card data (e.g. MIFARE Classic sectors, DESFire crypto, or bank payment cards).
 - **Authorized Use Only**: Use the app only with cards and systems you own or are explicitly authorized to test.
-- **On-Device Only**: The app has no network permission, does not upload card UIDs, and includes no analytics or telemetry.
+- **On-Device Only**: Network access is used only to connect to Android's wireless ADB service on the same device during permission setup. The app does not upload card UIDs and includes no analytics or telemetry.
 - **Raw NCI Safety**: Raw NCI mode temporarily changes NFC controller parameters and automatically snapshots and restores the original configuration.
-- **Explicit Permission Grant**: `WRITE_SECURE_SETTINGS` must be granted deliberately by the user through ADB (or an equivalent local tool).
+- **Explicit Permission Grant**: `WRITE_SECURE_SETTINGS` is granted only after the user explicitly chooses Shizuku, wireless debugging, or computer ADB setup.
 
 ---
 

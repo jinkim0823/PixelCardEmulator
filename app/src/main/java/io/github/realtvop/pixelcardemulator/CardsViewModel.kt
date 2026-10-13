@@ -17,6 +17,9 @@ data class EmulatorUiState(
     val busy: Boolean = false,
     val status: String? = null,
     val permissionRequired: Boolean = false,
+    val permissionGrantBusy: Boolean = false,
+    val permissionGrantStatus: String? = null,
+    val permissionGrantError: String? = null,
     val experimentalRawConfirmationRequired: Boolean = false,
     val error: String? = null,
 )
@@ -54,6 +57,24 @@ class CardsViewModel(application: Application) : AndroidViewModel(application) {
     private val emulator = NfcEmulationCoordinator(application)
     private val executor = Executors.newSingleThreadExecutor()
     private val mainHandler = Handler(Looper.getMainLooper())
+    private val shizukuPermissionGranter = ShizukuPermissionGranter(
+        application,
+        onProgress = {
+            emulatorUiState = emulatorUiState.copy(
+                permissionGrantBusy = true,
+                permissionGrantStatus = localized(R.string.shizuku_grant_in_progress),
+                permissionGrantError = null,
+            )
+        },
+        onGranted = ::refreshPermission,
+        onError = { message ->
+            emulatorUiState = emulatorUiState.copy(
+                permissionGrantBusy = false,
+                permissionGrantStatus = null,
+                permissionGrantError = localized(message),
+            )
+        },
+    )
     private var pendingAction: PendingAction? = null
 
     var cards by mutableStateOf(store.loadCards())
@@ -145,7 +166,12 @@ class CardsViewModel(application: Application) : AndroidViewModel(application) {
         secureSettingsGranted = hasSecureSettingsPermission()
         if (!secureSettingsGranted) return
         if (emulatorUiState.permissionRequired) {
-            emulatorUiState = emulatorUiState.copy(permissionRequired = false)
+            emulatorUiState = emulatorUiState.copy(
+                permissionRequired = false,
+                permissionGrantBusy = false,
+                permissionGrantStatus = null,
+                permissionGrantError = null,
+            )
         }
         if (pendingAction != null && !emulatorUiState.busy) pendingAction?.let(::runAction)
     }
@@ -171,6 +197,18 @@ class CardsViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun grantPermissionWithShizuku() {
+        shizukuPermissionGranter.grant()
+    }
+
+    fun reportPermissionSetupError(@StringRes message: Int) {
+        emulatorUiState = emulatorUiState.copy(
+            permissionGrantBusy = false,
+            permissionGrantStatus = null,
+            permissionGrantError = localized(message),
+        )
+    }
+
     fun confirmExperimentalRaw() {
         emulator.allowExperimentalRawForCurrentFirmware()
         emulatorUiState = emulatorUiState.copy(experimentalRawConfirmationRequired = false)
@@ -187,6 +225,7 @@ class CardsViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     override fun onCleared() {
+        shizukuPermissionGranter.close()
         executor.shutdownNow()
         super.onCleared()
     }

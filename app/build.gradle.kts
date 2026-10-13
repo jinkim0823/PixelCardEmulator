@@ -17,6 +17,7 @@ android {
     }
 
     buildFeatures {
+        aidl = true
         compose = true
     }
 }
@@ -32,6 +33,10 @@ kotlin {
 
 dependencies {
     implementation(libs.androidx.activity.compose)
+    implementation(libs.conscrypt.android)
+    implementation(libs.libadb.android)
+    implementation(libs.shizuku.api)
+    implementation(libs.shizuku.provider)
 
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.material.icons.core)

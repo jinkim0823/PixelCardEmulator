@@ -14,7 +14,7 @@
 
 ## 功能特性
 
-- **无需 Root**：只需通过 ADB 一次性授予权限（`WRITE_SECURE_SETTINGS`）。
+- **无需 Root**：可通过 Shizuku、本机无线调试或电脑 ADB 一次性授予 `WRITE_SECURE_SETTINGS` 权限。
 - **两种模拟后端**：
   - **厂商扩展（Android 15+）**：使用系统平台的 `NfcOemExtension.emulateNfcTechnologyATag`。
   - **原始 NCI 备用方案**：通过厂商 NCI 命令直接与控制器通信，并自动快照和恢复参数。
@@ -27,14 +27,17 @@
 ## 系统要求
 
 - **设备**：运行 **Android 15+** 的 Google Pixel（或通过原始 NCI 支持的三星、一加、索尼等兼容设备）。
-- **权限**：`android.permission.WRITE_SECURE_SETTINGS`（需通过 ADB 授予一次）。
+- **权限**：`android.permission.WRITE_SECURE_SETTINGS`（通过以下任一方式授予一次）。
 
 ---
 
 ## 设置
 
 1. 安装 APK。
-2. 通过 ADB（或 Shizuku / LADB）授予所需权限：
+2. 打开应用，选择一种权限设置方式：
+   - **Shizuku**：启动 Shizuku，点按“通过 Shizuku 授权”，然后允许请求。
+   - **无线调试**：点按“通过无线调试授权”，在开发者选项中打开“无线调试”→“使用配对码配对设备”，再从设置通知中输入配对码。
+   - **电脑 ADB**：运行：
    ```bash
    adb shell pm grant io.github.realtvop.pixelcardemulator android.permission.WRITE_SECURE_SETTINGS
    ```
@@ -46,9 +49,9 @@
 
 - **仅限 UID**：仅模拟 ISO 14443-A 的 UID（`NFCID1`）。**不**模拟加密的卡片数据（例如 MIFARE Classic 扇区、DESFire 加密或银行支付卡）。
 - **仅限授权使用**：只能用于自己拥有或已获明确授权测试的卡片和系统。
-- **仅在本机处理**：应用不申请网络权限，不上传卡片 UID，也不包含分析或遥测功能。
+- **仅在本机处理**：网络权限仅用于设置权限时连接同一设备上的 Android 无线 ADB 服务。应用不会上传卡片 UID，也不包含分析或遥测功能。
 - **原始 NCI 安全机制**：原始 NCI 模式会临时修改 NFC 控制器参数，并自动快照和恢复原始配置。
-- **主动授予权限**：用户必须通过 ADB（或等效的本地工具）主动授予 `WRITE_SECURE_SETTINGS` 权限。
+- **主动授予权限**：只有用户明确选择 Shizuku、无线调试或电脑 ADB 设置后，才会授予 `WRITE_SECURE_SETTINGS` 权限。
 
 ---
 
