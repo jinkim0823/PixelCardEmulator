@@ -40,7 +40,6 @@ import androidx.compose.material3.FilledTonalIconToggleButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
@@ -97,7 +96,7 @@ fun CardListScreen(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             Column {
-                LargeFlexibleTopAppBar(
+                InlineActionsTopAppBar(
                     title = { Text(stringResource(R.string.cards)) },
                     subtitle = { Text(stringResource(R.string.tap_to_activate)) },
                     actions = {
