@@ -1,4 +1,4 @@
-package github.realtvop.pixelcardemulator
+package io.github.realtvop.pixelcardemulator
 
 import android.app.Activity
 import android.content.Context

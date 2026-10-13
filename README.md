@@ -36,7 +36,7 @@ English | [简体中文](README.zh-CN.md)
 1. Install the APK.
 2. Grant the required permission via ADB (or Shizuku / LADB):
    ```bash
-   adb shell pm grant github.realtvop.pixelcardemulator android.permission.WRITE_SECURE_SETTINGS
+   adb shell pm grant io.github.realtvop.pixelcardemulator android.permission.WRITE_SECURE_SETTINGS
    ```
 3. Enable NFC, open the app, scan or add your card, and tap to activate.
 
@@ -45,7 +45,10 @@ English | [简体中文](README.zh-CN.md)
 ## Limitations
 
 - **UID Only**: Emulates only the ISO 14443-A UID (`NFCID1`). Does **not** emulate encrypted card data (e.g. MIFARE Classic sectors, DESFire crypto, or bank payment cards).
-- **Intended Use**: Compatible with access readers, parking barriers, and gym turnstiles that verify identity solely by UID.
+- **Authorized Use Only**: Use the app only with cards and systems you own or are explicitly authorized to test.
+- **On-Device Only**: The app has no network permission, does not upload card UIDs, and includes no analytics or telemetry.
+- **Raw NCI Safety**: Raw NCI mode temporarily changes NFC controller parameters and automatically snapshots and restores the original configuration.
+- **Explicit Permission Grant**: `WRITE_SECURE_SETTINGS` must be granted deliberately by the user through ADB (or an equivalent local tool).
 
 ---
 

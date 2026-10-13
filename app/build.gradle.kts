@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace = "github.realtvop.pixelcardemulator"
+    namespace = "io.github.realtvop.pixelcardemulator"
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "github.realtvop.pixelcardemulator"
+        applicationId = "io.github.realtvop.pixelcardemulator"
         // Dynamic color needs Android 12, so the theme has no static fallback palette.
         minSdk = 35
         targetSdk = 37

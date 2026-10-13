@@ -1,4 +1,4 @@
-package github.realtvop.pixelcardemulator
+package io.github.realtvop.pixelcardemulator
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialExpressiveTheme

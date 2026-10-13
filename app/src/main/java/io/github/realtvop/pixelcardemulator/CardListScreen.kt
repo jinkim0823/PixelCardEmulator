@@ -1,4 +1,4 @@
-package github.realtvop.pixelcardemulator
+package io.github.realtvop.pixelcardemulator
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState

@@ -36,7 +36,7 @@
 1. 安装 APK。
 2. 通过 ADB（或 Shizuku / LADB）授予所需权限：
    ```bash
-   adb shell pm grant github.realtvop.pixelcardemulator android.permission.WRITE_SECURE_SETTINGS
+   adb shell pm grant io.github.realtvop.pixelcardemulator android.permission.WRITE_SECURE_SETTINGS
    ```
 3. 开启 NFC，打开应用，扫描或添加卡片，然后点按卡片即可激活。
 
@@ -45,7 +45,10 @@
 ## 局限性
 
 - **仅限 UID**：仅模拟 ISO 14443-A 的 UID（`NFCID1`）。**不**模拟加密的卡片数据（例如 MIFARE Classic 扇区、DESFire 加密或银行支付卡）。
-- **适用场景**：兼容仅通过 UID 验证身份的门禁读卡器、停车道闸和健身房闸机。
+- **仅限授权使用**：只能用于自己拥有或已获明确授权测试的卡片和系统。
+- **仅在本机处理**：应用不申请网络权限，不上传卡片 UID，也不包含分析或遥测功能。
+- **原始 NCI 安全机制**：原始 NCI 模式会临时修改 NFC 控制器参数，并自动快照和恢复原始配置。
+- **主动授予权限**：用户必须通过 ADB（或等效的本地工具）主动授予 `WRITE_SECURE_SETTINGS` 权限。
 
 ---
 
