@@ -204,7 +204,6 @@ private fun PermissionBanner(onClick: () -> Unit) {
         leadingContent = {
             Icon(painterResource(R.drawable.ic_contactless), contentDescription = null)
         },
-        supportingContent = { Text(stringResource(R.string.permission_banner_message)) },
         trailingContent = {
             TextButton(onClick = onClick) { Text(stringResource(R.string.set_up)) }
         },
@@ -212,7 +211,6 @@ private fun PermissionBanner(onClick: () -> Unit) {
         colors = ListItemDefaults.colors(
             containerColor = MaterialTheme.colorScheme.errorContainer,
             contentColor = MaterialTheme.colorScheme.onErrorContainer,
-            supportingContentColor = MaterialTheme.colorScheme.onErrorContainer,
             leadingContentColor = MaterialTheme.colorScheme.onErrorContainer,
             trailingContentColor = MaterialTheme.colorScheme.onErrorContainer,
         ),
