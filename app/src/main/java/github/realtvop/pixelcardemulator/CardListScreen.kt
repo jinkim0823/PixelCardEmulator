@@ -80,6 +80,7 @@ fun CardListScreen(
     onToggleDefault: (String) -> Unit,
     onAddCard: () -> Unit,
     onEditCard: (String) -> Unit,
+    operationStatus: String? = null,
 ) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val activeName = cards.find { it.id == activeId }?.name
@@ -93,7 +94,9 @@ fun CardListScreen(
                 title = { Text(stringResource(R.string.cards)) },
                 subtitle = {
                     Text(
-                        if (activeName != null) {
+                        if (operationStatus != null) {
+                            operationStatus
+                        } else if (activeName != null) {
                             stringResource(R.string.card_is_active, activeName)
                         } else {
                             stringResource(R.string.no_active_card)
@@ -364,6 +367,7 @@ private fun CardListScreenPreview() {
             onToggleDefault = {},
             onAddCard = {},
             onEditCard = {},
+            operationStatus = null,
         )
     }
 }

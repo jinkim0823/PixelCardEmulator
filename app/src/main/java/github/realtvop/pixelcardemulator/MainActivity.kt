@@ -1,5 +1,8 @@
 package github.realtvop.pixelcardemulator
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -13,12 +16,18 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.delay
 
 /** Editor target for a card that does not exist yet. Never collides with an id, which is a UUID. */
 private const val NewCard = "new"
@@ -57,6 +66,7 @@ class MainActivity : ComponentActivity() {
                             onToggleDefault = viewModel::toggleDefault,
                             onAddCard = { editorTarget = NewCard },
                             onEditCard = { editorTarget = it },
+                            operationStatus = viewModel.emulatorUiState.status,
                         )
                     } else {
                         // Remembered so the screen still shows the card while it animates out after a delete.
@@ -75,7 +85,62 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                 }
+
+                val emulatorState = viewModel.emulatorUiState
+                if (emulatorState.permissionRequired) {
+                    SecureSettingsPermissionDialog(
+                        command = viewModel.grantCommand,
+                        onDismiss = viewModel::dismissPermissionPrompt,
+                    )
+                    LaunchedEffect(Unit) {
+                        while (true) {
+                            delay(1000)
+                            viewModel.refreshPermission()
+                        }
+                    }
+                }
+                emulatorState.error?.let { message ->
+                    AlertDialog(
+                        onDismissRequest = viewModel::dismissError,
+                        title = { Text(getString(R.string.nfc_operation_failed)) },
+                        text = { Text(message) },
+                        confirmButton = {
+                            TextButton(onClick = viewModel::dismissError) { Text(getString(R.string.ok)) }
+                        },
+                    )
+                }
             }
         }
     }
+
+    override fun onResume() {
+        super.onResume()
+        viewModel.refreshPermission()
+    }
+}
+
+@androidx.compose.runtime.Composable
+private fun SecureSettingsPermissionDialog(
+    command: String,
+    onDismiss: () -> Unit,
+) {
+    val context = LocalContext.current
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(context.getString(R.string.permission_required)) },
+        text = { Text(context.getString(R.string.permission_explanation, command)) },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                    clipboard.setPrimaryClip(ClipData.newPlainText("ADB command", command))
+                },
+            ) {
+                Text(context.getString(R.string.copy_command))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(context.getString(R.string.cancel)) }
+        },
+    )
 }

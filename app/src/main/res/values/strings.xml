@@ -48,4 +48,9 @@
     <string name="nfc_unavailable">This device does not have NFC.</string>
     <string name="nfc_disabled">Turn on NFC to scan a card.</string>
     <string name="unsupported_uid_length">Only 4, 7, or 10-byte NFC-A UIDs are supported.</string>
+    <string name="permission_required">ADB permission required</string>
+    <string name="permission_explanation">UID emulation changes NFC controller settings and requires a one-time development permission. This emulates only the UID, not card data.\n\nRun:\n%1$s</string>
+    <string name="copy_command">Copy command</string>
+    <string name="nfc_operation_failed">NFC operation failed</string>
+    <string name="ok">OK</string>
 </resources>
