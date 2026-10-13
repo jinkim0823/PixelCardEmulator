@@ -3,18 +3,33 @@ package github.realtvop.pixelcardemulator
 import android.content.Context
 import android.nfc.NfcAdapter
 import android.nfc.NfcManager
+import android.os.Build
 import java.lang.reflect.Method
 
-class NfcEmulationException(message: String, cause: Throwable? = null) : Exception(message, cause)
+open class NfcEmulationException(message: String, cause: Throwable? = null) : Exception(message, cause)
+class ExperimentalRawConsentRequiredException : NfcEmulationException(
+    "Raw NFC access has not been approved for this firmware",
+)
+
+private const val CoordinatorPreferences = "nfc_emulation_state"
+private const val ActiveBackendKey = "active_backend"
+private const val ExperimentalFingerprintKey = "experimental_raw_fingerprint"
+private const val ForceRawKey = "force_raw"
+
+internal interface NfcCardEmulationBackend {
+    val isSupported: Boolean
+    fun activate(uid: ByteArray)
+    fun deactivate()
+}
 
 /** Android 15+'s system-service implementation of NFC-A identity emulation. */
-class OemNfcCardEmulator(context: Context) {
+private class OemNfcCardEmulator(context: Context) : NfcCardEmulationBackend {
     private val adapter: NfcAdapter? = context.getSystemService(NfcManager::class.java)?.defaultAdapter
 
-    val isSupported: Boolean
+    override val isSupported: Boolean
         get() = runCatching { resolveApi(requireEnabled = false) }.isSuccess
 
-    fun activate(uid: ByteArray) {
+    override fun activate(uid: ByteArray) {
         require(uid.size in SupportedUidSizes) { "Unsupported UID length" }
         val api = resolveApi()
         invoke(
@@ -28,7 +43,7 @@ class OemNfcCardEmulator(context: Context) {
         )
     }
 
-    fun deactivate() {
+    override fun deactivate() {
         invoke(
             resolveApi(),
             enabled = false,
@@ -105,7 +120,81 @@ class OemNfcCardEmulator(context: Context) {
     private data class Api(val extension: Any, val emulate: Method)
 }
 
-private fun findMethod(owner: Class<*>, name: String, vararg parameters: Class<*>): Method {
+/** Chooses the official system route first and retains the chosen backend until restore. */
+class NfcEmulationCoordinator(context: Context) {
+    private val preferences = context.getSharedPreferences(CoordinatorPreferences, Context.MODE_PRIVATE)
+    private val oem = OemNfcCardEmulator(context)
+    private val raw = RawNciCardEmulator(context)
+
+    val isSupported: Boolean
+        get() = oem.isSupported || raw.isSupported
+
+    val hasPendingRestore: Boolean
+        get() = preferences.contains(ActiveBackendKey) || raw.hasPendingRestore
+
+    var forceRaw: Boolean
+        get() = preferences.getBoolean(ForceRawKey, false)
+        set(value) {
+            check(preferences.edit().putBoolean(ForceRawKey, value).commit()) {
+                "Could not save raw NFC preference"
+            }
+        }
+
+    val requiresExperimentalRawConsent: Boolean
+        get() = raw.isSupported && (!oem.isSupported || forceRaw) && !RawNfcDeviceCatalog.isAllowlisted &&
+            preferences.getString(ExperimentalFingerprintKey, null) != Build.FINGERPRINT
+
+    fun setActivity(activity: android.app.Activity?) {
+        raw.setActivity(activity)
+    }
+
+    fun allowExperimentalRawForCurrentFirmware() {
+        check(
+            preferences.edit()
+                .putString(ExperimentalFingerprintKey, Build.FINGERPRINT)
+                .commit(),
+        ) { "Could not save raw NFC consent" }
+    }
+
+    fun activate(uid: ByteArray) {
+        val backendName = preferences.getString(ActiveBackendKey, null)
+        val (name, backend) = when (backendName) {
+            "oem" -> "oem" to oem
+            "raw" -> "raw" to raw
+            else -> selectBackend()
+        }
+        check(preferences.edit().putString(ActiveBackendKey, name).commit()) {
+            "Could not save NFC recovery route"
+        }
+        backend.activate(uid)
+    }
+
+    fun deactivate() {
+        val backend = when (preferences.getString(ActiveBackendKey, null)) {
+            "raw" -> raw
+            "oem" -> oem
+            else -> if (raw.hasPendingRestore) raw else oem
+        }
+        backend.deactivate()
+        check(preferences.edit().remove(ActiveBackendKey).commit()) {
+            "Could not clear NFC recovery route"
+        }
+    }
+
+    private fun selectBackend(): Pair<String, NfcCardEmulationBackend> {
+        if (raw.isSupported && RawNfcDeviceCatalog.isAllowlisted && (!oem.isSupported || forceRaw)) {
+            return "raw" to raw
+        }
+        if (oem.isSupported && !forceRaw) return "oem" to oem
+        if (!raw.isSupported) throw NfcEmulationException("UID emulation is not supported by this NFC system")
+        if (!RawNfcDeviceCatalog.isAllowlisted && requiresExperimentalRawConsent) {
+            throw ExperimentalRawConsentRequiredException()
+        }
+        return "raw" to raw
+    }
+}
+
+internal fun findMethod(owner: Class<*>, name: String, vararg parameters: Class<*>): Method {
     return try {
         owner.getMethod(name, *parameters)
     } catch (_: NoSuchMethodException) {

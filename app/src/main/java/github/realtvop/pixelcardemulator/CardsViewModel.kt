@@ -2,7 +2,6 @@ package github.realtvop.pixelcardemulator
 
 import android.app.Application
 import android.Manifest
-import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Handler
 import android.os.Looper
@@ -13,13 +12,11 @@ import androidx.lifecycle.AndroidViewModel
 import java.util.UUID
 import java.util.concurrent.Executors
 
-private const val NfcStatePreferences = "nfc_emulation_state"
-private const val OemRestorePendingKey = "oem_restore_pending"
-
 data class EmulatorUiState(
     val busy: Boolean = false,
     val status: String? = null,
     val permissionRequired: Boolean = false,
+    val experimentalRawConfirmationRequired: Boolean = false,
     val error: String? = null,
 )
 
@@ -53,8 +50,7 @@ val MockCards = listOf(
 
 class CardsViewModel(application: Application) : AndroidViewModel(application) {
     private val store = CardStore(application)
-    private val emulator = OemNfcCardEmulator(application)
-    private val nfcState = application.getSharedPreferences(NfcStatePreferences, Context.MODE_PRIVATE)
+    private val emulator = NfcEmulationCoordinator(application)
     private val executor = Executors.newSingleThreadExecutor()
     private val mainHandler = Handler(Looper.getMainLooper())
     private var pendingAction: PendingAction? = null
@@ -73,15 +69,18 @@ class CardsViewModel(application: Application) : AndroidViewModel(application) {
     var emulatorUiState by mutableStateOf(EmulatorUiState())
         private set
 
+    var forceRaw by mutableStateOf(emulator.forceRaw)
+        private set
+
     val grantCommand: String
         get() = "adb shell pm grant ${getApplication<Application>().packageName} " +
             "android.permission.WRITE_SECURE_SETTINGS"
 
     init {
-        if (nfcState.getBoolean(OemRestorePendingKey, false)) {
-            runAction(PendingAction.RestoreAfterRestart)
+        pendingAction = if (emulator.hasPendingRestore) {
+            PendingAction.RestoreAfterRestart
         } else {
-            defaultId?.let { id -> cards.find { it.id == id } }?.let { runAction(PendingAction.Activate(it, null)) }
+            defaultId?.let { id -> cards.find { it.id == id } }?.let { PendingAction.Activate(it, null) }
         }
     }
 
@@ -102,6 +101,11 @@ class CardsViewModel(application: Application) : AndroidViewModel(application) {
     fun toggleDefault(id: String) {
         defaultId = if (defaultId == id) null else id
         store.saveDefaultCardId(defaultId)
+    }
+
+    fun toggleForceRaw() {
+        forceRaw = !forceRaw
+        emulator.forceRaw = forceRaw
     }
 
     fun add(name: String, uid: String) {
@@ -133,8 +137,31 @@ class CardsViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun attachActivity(activity: android.app.Activity) {
+        emulator.setActivity(activity)
+        if (pendingAction != null && !emulatorUiState.busy && emulatorUiState.error == null) {
+            pendingAction?.let(::runAction)
+        }
+    }
+
+    fun detachActivity(activity: android.app.Activity) {
+        emulator.setActivity(null)
+    }
+
     fun dismissPermissionPrompt() {
         emulatorUiState = emulatorUiState.copy(permissionRequired = false)
+        pendingAction = null
+    }
+
+    fun confirmExperimentalRaw() {
+        emulator.allowExperimentalRawForCurrentFirmware()
+        emulatorUiState = emulatorUiState.copy(experimentalRawConfirmationRequired = false)
+        pendingAction?.let(::runAction)
+    }
+
+    fun dismissExperimentalRawConfirmation() {
+        emulatorUiState = emulatorUiState.copy(experimentalRawConfirmationRequired = false)
+        pendingAction = null
     }
 
     fun dismissError() {
@@ -167,6 +194,10 @@ class CardsViewModel(application: Application) : AndroidViewModel(application) {
             pendingAction = null
             return
         }
+        if (action is PendingAction.Activate && emulator.requiresExperimentalRawConsent) {
+            emulatorUiState = EmulatorUiState(experimentalRawConfirmationRequired = true)
+            return
+        }
 
         emulatorUiState = EmulatorUiState(
             busy = true,
@@ -185,7 +216,6 @@ class CardsViewModel(application: Application) : AndroidViewModel(application) {
                 is PendingAction.Activate -> executeActivation(action)
                 is PendingAction.Deactivate -> {
                     emulator.deactivate()
-                    saveRestorePending(false)
                     mainHandler.post {
                         setActive(null)
                         action.deleteCardId?.let(::deleteStoredCard)
@@ -194,7 +224,6 @@ class CardsViewModel(application: Application) : AndroidViewModel(application) {
                 }
                 PendingAction.RestoreAfterRestart -> {
                     emulator.deactivate()
-                    saveRestorePending(false)
                     mainHandler.post {
                         setActive(null)
                         finishAction()
@@ -206,14 +235,17 @@ class CardsViewModel(application: Application) : AndroidViewModel(application) {
             }
         } catch (error: Throwable) {
             mainHandler.post {
-                emulatorUiState = EmulatorUiState(error = error.message ?: "NFC operation failed")
-                pendingAction = null
+                if (error is ExperimentalRawConsentRequiredException) {
+                    emulatorUiState = EmulatorUiState(experimentalRawConfirmationRequired = true)
+                } else {
+                    emulatorUiState = EmulatorUiState(error = error.message ?: "NFC operation failed")
+                    pendingAction = null
+                }
             }
         }
     }
 
     private fun executeActivation(action: PendingAction.Activate) {
-        saveRestorePending(true)
         try {
             emulator.activate(action.card.uid.hexToBytes())
             mainHandler.post {
@@ -234,7 +266,6 @@ class CardsViewModel(application: Application) : AndroidViewModel(application) {
                     }
                 } else {
                     emulator.deactivate()
-                    saveRestorePending(false)
                 }
             }.exceptionOrNull()
             if (rollbackError != null) {
@@ -247,12 +278,6 @@ class CardsViewModel(application: Application) : AndroidViewModel(application) {
     private fun finishAction() {
         emulatorUiState = EmulatorUiState()
         pendingAction = null
-    }
-
-    private fun saveRestorePending(pending: Boolean) {
-        check(nfcState.edit().putBoolean(OemRestorePendingKey, pending).commit()) {
-            "Could not save NFC recovery state"
-        }
     }
 
     private fun hasSecureSettingsPermission(): Boolean =

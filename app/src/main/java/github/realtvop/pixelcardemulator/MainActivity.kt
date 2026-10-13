@@ -67,6 +67,8 @@ class MainActivity : ComponentActivity() {
                             onAddCard = { editorTarget = NewCard },
                             onEditCard = { editorTarget = it },
                             operationStatus = viewModel.emulatorUiState.status,
+                            forceRaw = viewModel.forceRaw,
+                            onToggleForceRaw = viewModel::toggleForceRaw,
                         )
                     } else {
                         // Remembered so the screen still shows the card while it animates out after a delete.
@@ -109,13 +111,36 @@ class MainActivity : ComponentActivity() {
                         },
                     )
                 }
+                if (emulatorState.experimentalRawConfirmationRequired) {
+                    AlertDialog(
+                        onDismissRequest = viewModel::dismissExperimentalRawConfirmation,
+                        title = { Text(getString(R.string.experimental_raw_title)) },
+                        text = { Text(getString(R.string.experimental_raw_message)) },
+                        confirmButton = {
+                            TextButton(onClick = viewModel::confirmExperimentalRaw) {
+                                Text(getString(R.string.continue_action))
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = viewModel::dismissExperimentalRawConfirmation) {
+                                Text(getString(R.string.cancel))
+                            }
+                        },
+                    )
+                }
             }
         }
     }
 
     override fun onResume() {
         super.onResume()
+        viewModel.attachActivity(this)
         viewModel.refreshPermission()
+    }
+
+    override fun onPause() {
+        viewModel.detachActivity(this)
+        super.onPause()
     }
 }
 

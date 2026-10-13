@@ -30,13 +30,17 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material3.DropdownMenuGroup
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.DropdownMenuPopup
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FilledTonalIconToggleButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.ListItem
@@ -81,11 +85,14 @@ fun CardListScreen(
     onAddCard: () -> Unit,
     onEditCard: (String) -> Unit,
     operationStatus: String? = null,
+    forceRaw: Boolean = false,
+    onToggleForceRaw: () -> Unit = {},
 ) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val activeName = cards.find { it.id == activeId }?.name
     // The card whose swipe menu is open. Held here so that opening one closes any other.
     var swipedCardId by remember { mutableStateOf<String?>(null) }
+    var appMenuOpen by remember { mutableStateOf(false) }
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -112,6 +119,25 @@ fun CardListScreen(
                             .size(IconButtonDefaults.smallContainerSize(IconButtonDefaults.IconButtonWidthOption.Wide)),
                     ) {
                         Icon(Icons.Rounded.Add, contentDescription = stringResource(R.string.add_card))
+                    }
+                    Box {
+                        IconButton(onClick = { appMenuOpen = true }) {
+                            Icon(Icons.Rounded.MoreVert, contentDescription = stringResource(R.string.more_options))
+                        }
+                        DropdownMenu(expanded = appMenuOpen, onDismissRequest = { appMenuOpen = false }) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.raw_nci_mode)) },
+                                onClick = {
+                                    appMenuOpen = false
+                                    onToggleForceRaw()
+                                },
+                                trailingIcon = {
+                                    if (forceRaw) {
+                                        Icon(Icons.Rounded.Check, contentDescription = stringResource(R.string.enabled))
+                                    }
+                                },
+                            )
+                        }
                     }
                 },
                 scrollBehavior = scrollBehavior,
@@ -368,6 +394,8 @@ private fun CardListScreenPreview() {
             onAddCard = {},
             onEditCard = {},
             operationStatus = null,
+            forceRaw = false,
+            onToggleForceRaw = {},
         )
     }
 }

@@ -53,4 +53,10 @@
     <string name="copy_command">Copy command</string>
     <string name="nfc_operation_failed">NFC operation failed</string>
     <string name="ok">OK</string>
+    <string name="experimental_raw_title">Experimental NFC access</string>
+    <string name="experimental_raw_message">The official UID emulation interface is unavailable on this device. The fallback writes NFC controller parameters directly. A saved snapshot will be restored when the card is deactivated or the app restarts, but this firmware has not been validated. Consent applies only to the current firmware build.</string>
+    <string name="continue_action">Continue</string>
+    <string name="more_options">More options</string>
+    <string name="raw_nci_mode">Raw NCI mode</string>
+    <string name="enabled">Enabled</string>
 </resources>
