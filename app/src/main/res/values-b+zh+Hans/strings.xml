@@ -10,10 +10,10 @@
     <string name="edit">编辑</string>
     <string name="tips">提示</string>
     <string-array name="card_tips">
-        <item>点按 + 添加卡片。</item>
-        <item>输入 UID，或将卡片贴近手机背面进行扫描。</item>
-        <item>同一时间只能激活一张卡片。点按已激活的卡片即可取消激活。</item>
-        <item>滑动卡片可编辑，或将其设为默认卡片，使其在应用打开时自动激活。</item>
+        <item>点按 + 添加卡片</item>
+        <item>扫描卡片或输入 UID</item>
+        <item>点按已激活的卡片即可取消激活</item>
+        <item>滑动卡片可编辑或设为默认</item>
     </string-array>
 
     <!-- Add or edit card -->
