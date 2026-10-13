@@ -1,5 +1,7 @@
 # PixelCardEmulator
 
+English | [简体中文](README.zh-CN.md)
+
 > An NFC Card Emulator that **actually works on Pixel phones, root not required.**
 
 [![Android](https://img.shields.io/badge/Android-15%2B%20(API%2035%2B)-3DDC84?logo=android&logoColor=white)](https://developer.android.com)
