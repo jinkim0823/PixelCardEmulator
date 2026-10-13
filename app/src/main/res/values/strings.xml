@@ -59,4 +59,6 @@
     <string name="more_options">More options</string>
     <string name="raw_nci_mode">Raw NCI mode</string>
     <string name="enabled">Enabled</string>
+    <string name="permission_banner_message">Grant WRITE_SECURE_SETTINGS to activate saved cards.</string>
+    <string name="set_up">Set up</string>
 </resources>

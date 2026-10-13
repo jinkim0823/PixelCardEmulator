@@ -66,10 +66,15 @@ class CardsViewModel(application: Application) : AndroidViewModel(application) {
     var defaultId by mutableStateOf(store.loadDefaultCardId().takeIf { id -> cards.any { it.id == id } })
         private set
 
+    var secureSettingsGranted by mutableStateOf(
+        application.checkSelfPermission(Manifest.permission.WRITE_SECURE_SETTINGS) ==
+            PackageManager.PERMISSION_GRANTED,
+    )
+        private set
+
     var emulatorUiState by mutableStateOf(
         EmulatorUiState(
-            permissionRequired = application.checkSelfPermission(Manifest.permission.WRITE_SECURE_SETTINGS) !=
-                PackageManager.PERMISSION_GRANTED,
+            permissionRequired = !secureSettingsGranted,
         ),
     )
         private set
@@ -136,7 +141,8 @@ class CardsViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun refreshPermission() {
-        if (!hasSecureSettingsPermission()) return
+        secureSettingsGranted = hasSecureSettingsPermission()
+        if (!secureSettingsGranted) return
         if (emulatorUiState.permissionRequired) {
             emulatorUiState = emulatorUiState.copy(permissionRequired = false)
         }
@@ -156,6 +162,12 @@ class CardsViewModel(application: Application) : AndroidViewModel(application) {
 
     fun dismissPermissionPrompt() {
         emulatorUiState = emulatorUiState.copy(permissionRequired = false)
+    }
+
+    fun showPermissionPrompt() {
+        if (!secureSettingsGranted) {
+            emulatorUiState = emulatorUiState.copy(permissionRequired = true)
+        }
     }
 
     fun confirmExperimentalRaw() {
@@ -191,6 +203,7 @@ class CardsViewModel(application: Application) : AndroidViewModel(application) {
     private fun runAction(action: PendingAction) {
         pendingAction = action
         if (!hasSecureSettingsPermission()) {
+            secureSettingsGranted = false
             emulatorUiState = EmulatorUiState(permissionRequired = true)
             return
         }

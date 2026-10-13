@@ -69,6 +69,8 @@ class MainActivity : ComponentActivity() {
                             operationStatus = viewModel.emulatorUiState.status,
                             forceRaw = viewModel.forceRaw,
                             onToggleForceRaw = viewModel::toggleForceRaw,
+                            showPermissionBanner = !viewModel.secureSettingsGranted && !viewModel.forceRaw,
+                            onPermissionBannerClick = viewModel::showPermissionPrompt,
                         )
                     } else {
                         // Remembered so the screen still shows the card while it animates out after a delete.

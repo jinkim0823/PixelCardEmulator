@@ -15,6 +15,7 @@ import androidx.compose.foundation.gestures.anchoredDraggable
 import androidx.compose.foundation.gestures.animateTo
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -49,6 +50,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -87,6 +89,8 @@ fun CardListScreen(
     operationStatus: String? = null,
     forceRaw: Boolean = false,
     onToggleForceRaw: () -> Unit = {},
+    showPermissionBanner: Boolean = false,
+    onPermissionBannerClick: () -> Unit = {},
 ) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val activeName = cards.find { it.id == activeId }?.name
@@ -97,51 +101,63 @@ fun CardListScreen(
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            LargeFlexibleTopAppBar(
-                title = { Text(stringResource(R.string.cards)) },
-                subtitle = {
-                    Text(
-                        if (operationStatus != null) {
-                            operationStatus
-                        } else if (activeName != null) {
-                            stringResource(R.string.card_is_active, activeName)
-                        } else {
-                            stringResource(R.string.no_active_card)
-                        },
-                    )
-                },
-                actions = {
-                    FilledTonalIconButton(
-                        onClick = onAddCard,
-                        shapes = IconButtonDefaults.shapes(),
-                        modifier = Modifier
-                            .padding(end = 8.dp)
-                            .size(IconButtonDefaults.smallContainerSize(IconButtonDefaults.IconButtonWidthOption.Wide)),
-                    ) {
-                        Icon(Icons.Rounded.Add, contentDescription = stringResource(R.string.add_card))
-                    }
-                    Box {
-                        IconButton(onClick = { appMenuOpen = true }) {
-                            Icon(Icons.Rounded.MoreVert, contentDescription = stringResource(R.string.more_options))
+            Column {
+                LargeFlexibleTopAppBar(
+                    title = { Text(stringResource(R.string.cards)) },
+                    subtitle = {
+                        Text(
+                            if (operationStatus != null) {
+                                operationStatus
+                            } else if (activeName != null) {
+                                stringResource(R.string.card_is_active, activeName)
+                            } else {
+                                stringResource(R.string.no_active_card)
+                            },
+                        )
+                    },
+                    actions = {
+                        FilledTonalIconButton(
+                            onClick = onAddCard,
+                            shapes = IconButtonDefaults.shapes(),
+                            modifier = Modifier
+                                .padding(end = 8.dp)
+                                .size(
+                                    IconButtonDefaults.smallContainerSize(
+                                        IconButtonDefaults.IconButtonWidthOption.Wide,
+                                    ),
+                                ),
+                        ) {
+                            Icon(Icons.Rounded.Add, contentDescription = stringResource(R.string.add_card))
                         }
-                        DropdownMenu(expanded = appMenuOpen, onDismissRequest = { appMenuOpen = false }) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.raw_nci_mode)) },
-                                onClick = {
-                                    appMenuOpen = false
-                                    onToggleForceRaw()
-                                },
-                                trailingIcon = {
-                                    if (forceRaw) {
-                                        Icon(Icons.Rounded.Check, contentDescription = stringResource(R.string.enabled))
-                                    }
-                                },
-                            )
+                        Box {
+                            IconButton(onClick = { appMenuOpen = true }) {
+                                Icon(Icons.Rounded.MoreVert, contentDescription = stringResource(R.string.more_options))
+                            }
+                            DropdownMenu(expanded = appMenuOpen, onDismissRequest = { appMenuOpen = false }) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.raw_nci_mode)) },
+                                    onClick = {
+                                        appMenuOpen = false
+                                        onToggleForceRaw()
+                                    },
+                                    trailingIcon = {
+                                        if (forceRaw) {
+                                            Icon(
+                                                Icons.Rounded.Check,
+                                                contentDescription = stringResource(R.string.enabled),
+                                            )
+                                        }
+                                    },
+                                )
+                            }
                         }
-                    }
-                },
-                scrollBehavior = scrollBehavior,
-            )
+                    },
+                    scrollBehavior = scrollBehavior,
+                )
+                AnimatedVisibility(visible = showPermissionBanner) {
+                    PermissionBanner(onClick = onPermissionBannerClick)
+                }
+            }
         },
     ) { innerPadding ->
         // One column on a phone, more on unfolded or landscape screens.
@@ -178,6 +194,30 @@ fun CardListScreen(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun PermissionBanner(onClick: () -> Unit) {
+    ListItem(
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+        leadingContent = {
+            Icon(painterResource(R.drawable.ic_contactless), contentDescription = null)
+        },
+        supportingContent = { Text(stringResource(R.string.permission_banner_message)) },
+        trailingContent = {
+            TextButton(onClick = onClick) { Text(stringResource(R.string.set_up)) }
+        },
+        shapes = ListItemDefaults.shapes(shape = MaterialTheme.shapes.large),
+        colors = ListItemDefaults.colors(
+            containerColor = MaterialTheme.colorScheme.errorContainer,
+            contentColor = MaterialTheme.colorScheme.onErrorContainer,
+            supportingContentColor = MaterialTheme.colorScheme.onErrorContainer,
+            leadingContentColor = MaterialTheme.colorScheme.onErrorContainer,
+            trailingContentColor = MaterialTheme.colorScheme.onErrorContainer,
+        ),
+    ) {
+        Text(stringResource(R.string.permission_required))
     }
 }
 
@@ -396,6 +436,8 @@ private fun CardListScreenPreview() {
             operationStatus = null,
             forceRaw = false,
             onToggleForceRaw = {},
+            showPermissionBanner = true,
+            onPermissionBannerClick = {},
         )
     }
 }
