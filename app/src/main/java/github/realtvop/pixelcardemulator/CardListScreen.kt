@@ -18,13 +18,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.plus
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
@@ -34,10 +32,8 @@ import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Star
-import androidx.compose.material3.DropdownMenuGroup
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.DropdownMenuPopup
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FilledTonalIconToggleButton
 import androidx.compose.material3.Icon
@@ -47,7 +43,6 @@ import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -70,7 +65,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
@@ -86,14 +80,12 @@ fun CardListScreen(
     onToggleDefault: (String) -> Unit,
     onAddCard: () -> Unit,
     onEditCard: (String) -> Unit,
-    operationStatus: String? = null,
     forceRaw: Boolean = false,
     onToggleForceRaw: () -> Unit = {},
     showPermissionBanner: Boolean = false,
     onPermissionBannerClick: () -> Unit = {},
 ) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
-    val activeName = cards.find { it.id == activeId }?.name
     // The card whose swipe menu is open. Held here so that opening one closes any other.
     var swipedCardId by remember { mutableStateOf<String?>(null) }
     var appMenuOpen by remember { mutableStateOf(false) }
@@ -104,17 +96,7 @@ fun CardListScreen(
             Column {
                 LargeFlexibleTopAppBar(
                     title = { Text(stringResource(R.string.cards)) },
-                    subtitle = {
-                        Text(
-                            if (operationStatus != null) {
-                                operationStatus
-                            } else if (activeName != null) {
-                                stringResource(R.string.card_is_active, activeName)
-                            } else {
-                                stringResource(R.string.no_active_card)
-                            },
-                        )
-                    },
+                    subtitle = { Text(stringResource(R.string.tap_to_activate)) },
                     actions = {
                         FilledTonalIconButton(
                             onClick = onAddCard,
@@ -182,17 +164,6 @@ fun CardListScreen(
                     modifier = Modifier.animateItem(),
                 )
             }
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                Text(
-                    text = stringResource(if (cards.isEmpty()) R.string.list_empty else R.string.list_hint),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(24.dp),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                )
-            }
         }
     }
 }
@@ -229,7 +200,7 @@ private val SwipeMenuWidth = (SwipeActionSize + SwipeActionGap) * 2
 
 /**
  * Shows the name only; the UID stays hidden. Tap toggles active. The default toggle and Edit are
- * reached either by swiping the card aside or from the touch-and-hold menu.
+ * reached by swiping the card aside.
  */
 @Composable
 private fun CardRow(
@@ -245,7 +216,6 @@ private fun CardRow(
 ) {
     val haptics = LocalHapticFeedback.current
     val colorScheme = MaterialTheme.colorScheme
-    var menuOpen by remember { mutableStateOf(false) }
 
     val swipeWidthPx = with(LocalDensity.current) { SwipeMenuWidth.toPx() }
     val swipe = remember(swipeWidthPx) {
@@ -342,8 +312,6 @@ private fun CardRow(
                 }
             },
             verticalAlignment = Alignment.CenterVertically,
-            onLongClick = { menuOpen = true },
-            onLongClickLabel = stringResource(R.string.card_options),
             // The active card also rounds into a pill, so the state never depends on color alone.
             shapes = ListItemDefaults.shapes(
                 shape = MaterialTheme.shapes.extraLarge,
@@ -365,31 +333,6 @@ private fun CardRow(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-        }
-
-        DropdownMenuPopup(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-            DropdownMenuGroup(shapes = MenuDefaults.groupShape(index = 0, count = 1)) {
-                DropdownMenuItem(
-                    onClick = {
-                        menuOpen = false
-                        onToggleDefault()
-                    },
-                    text = {
-                        Text(stringResource(if (isDefault) R.string.remove_default else R.string.set_as_default))
-                    },
-                    shape = MenuDefaults.leadingItemShape,
-                    leadingIcon = { Icon(Icons.Rounded.Star, contentDescription = null) },
-                )
-                DropdownMenuItem(
-                    onClick = {
-                        menuOpen = false
-                        onEdit()
-                    },
-                    text = { Text(stringResource(R.string.edit)) },
-                    shape = MenuDefaults.trailingItemShape,
-                    leadingIcon = { Icon(Icons.Rounded.Edit, contentDescription = null) },
-                )
-            }
         }
     }
 }
@@ -431,7 +374,6 @@ private fun CardListScreenPreview() {
             onToggleDefault = {},
             onAddCard = {},
             onEditCard = {},
-            operationStatus = null,
             forceRaw = false,
             onToggleForceRaw = {},
             showPermissionBanner = true,

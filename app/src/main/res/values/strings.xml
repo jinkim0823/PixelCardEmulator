@@ -3,17 +3,11 @@
 
     <!-- Card list -->
     <string name="cards">Cards</string>
-    <string name="card_is_active">%1$s is active</string>
-    <string name="no_active_card">No card active</string>
+    <string name="tap_to_activate">Tap a card to activate</string>
     <string name="add_card">Add card</string>
     <string name="active">Active</string>
     <string name="default_card">Default</string>
-    <string name="card_options">Card options</string>
-    <string name="set_as_default">Set as default</string>
-    <string name="remove_default">Remove default</string>
     <string name="edit">Edit</string>
-    <string name="list_hint">Tap a card to activate it.\nSwipe or touch and hold for more.</string>
-    <string name="list_empty">No cards yet.\nUse the + button to add one.</string>
 
     <!-- Add or edit card -->
     <string name="back">Back</string>

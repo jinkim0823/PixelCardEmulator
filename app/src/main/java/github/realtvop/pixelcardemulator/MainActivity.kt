@@ -66,7 +66,6 @@ class MainActivity : ComponentActivity() {
                             onToggleDefault = viewModel::toggleDefault,
                             onAddCard = { editorTarget = NewCard },
                             onEditCard = { editorTarget = it },
-                            operationStatus = viewModel.emulatorUiState.status,
                             forceRaw = viewModel.forceRaw,
                             onToggleForceRaw = viewModel::toggleForceRaw,
                             showPermissionBanner = !viewModel.secureSettingsGranted && !viewModel.forceRaw,
