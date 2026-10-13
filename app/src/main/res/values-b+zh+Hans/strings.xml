@@ -8,13 +8,7 @@
     <string name="active">已激活</string>
     <string name="default_card">默认</string>
     <string name="edit">编辑</string>
-    <string name="tips">提示</string>
-    <string-array name="card_tips">
-        <item>点按 + 添加卡片</item>
-        <item>扫描卡片或输入 UID</item>
-        <item>点按已激活的卡片即可取消激活</item>
-        <item>滑动卡片可编辑或设为默认</item>
-    </string-array>
+    <string name="card_tip">点按 + 添加卡片</string>
 
     <!-- Add or edit card -->
     <string name="back">返回</string>

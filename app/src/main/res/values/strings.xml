@@ -8,13 +8,7 @@
     <string name="active">Active</string>
     <string name="default_card">Default</string>
     <string name="edit">Edit</string>
-    <string name="tips">Tips</string>
-    <string-array name="card_tips">
-        <item>Tap + to add a card</item>
-        <item>Scan a card or enter its UID</item>
-        <item>Tap an active card to turn it off</item>
-        <item>Swipe a card to edit or set default</item>
-    </string-array>
+    <string name="card_tip">Tap + to add a card</string>
 
     <!-- Add or edit card -->
     <string name="back">Back</string>
