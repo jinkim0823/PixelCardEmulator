@@ -18,12 +18,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.plus
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
@@ -64,9 +64,8 @@ import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
@@ -144,55 +143,43 @@ fun CardListScreen(
             }
         },
     ) { innerPadding ->
-        // One column on a phone, more on unfolded or landscape screens.
-        LazyVerticalGrid(
-            columns = GridCells.Adaptive(minSize = 320.dp),
-            contentPadding = innerPadding + PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            items(cards, key = { it.id }) { card ->
-                CardRow(
-                    card = card,
-                    active = card.id == activeId,
-                    isDefault = card.id == defaultId,
-                    swipeMenuOpen = card.id == swipedCardId,
-                    onSwipeMenuOpenChange = { open ->
-                        if (open) swipedCardId = card.id else if (swipedCardId == card.id) swipedCardId = null
-                    },
-                    onToggleActive = { onToggleActive(card.id) },
-                    onToggleDefault = { onToggleDefault(card.id) },
-                    onEdit = { onEditCard(card.id) },
-                    modifier = Modifier.animateItem(),
+        if (cards.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .padding(horizontal = 24.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = stringResource(R.string.card_tip),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
                 )
             }
-            if (cards.isEmpty()) {
-                item(span = { GridItemSpan(maxLineSpan) }) {
-                    Column(
-                        modifier = Modifier.padding(vertical = 16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        Text(
-                            text = stringResource(R.string.tips),
-                            style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                        stringArrayResource(R.array.card_tips).forEach { tip ->
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Text(
-                                    text = "•",
-                                    modifier = Modifier.clearAndSetSemantics {},
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                                Text(
-                                    text = tip,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                        }
-                    }
+        } else {
+            // One column on a phone, more on unfolded or landscape screens.
+            LazyVerticalGrid(
+                columns = GridCells.Adaptive(minSize = 320.dp),
+                contentPadding = innerPadding + PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                items(cards, key = { it.id }) { card ->
+                    CardRow(
+                        card = card,
+                        active = card.id == activeId,
+                        isDefault = card.id == defaultId,
+                        swipeMenuOpen = card.id == swipedCardId,
+                        onSwipeMenuOpenChange = { open ->
+                            if (open) swipedCardId = card.id else if (swipedCardId == card.id) swipedCardId = null
+                        },
+                        onToggleActive = { onToggleActive(card.id) },
+                        onToggleDefault = { onToggleDefault(card.id) },
+                        onEdit = { onEditCard(card.id) },
+                        modifier = Modifier.animateItem(),
+                    )
                 }
             }
         }
@@ -408,6 +395,26 @@ private fun CardListScreenPreview() {
             forceRaw = false,
             onToggleForceRaw = {},
             showPermissionBanner = true,
+            onPermissionBannerClick = {},
+        )
+    }
+}
+
+@PreviewLightDark
+@Composable
+private fun EmptyCardListScreenPreview() {
+    PixelCardTheme {
+        CardListScreen(
+            cards = emptyList(),
+            activeId = null,
+            defaultId = null,
+            onToggleActive = {},
+            onToggleDefault = {},
+            onAddCard = {},
+            onEditCard = {},
+            forceRaw = false,
+            onToggleForceRaw = {},
+            showPermissionBanner = false,
             onPermissionBannerClick = {},
         )
     }
