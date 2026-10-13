@@ -1,0 +1,37 @@
+<resources>
+    <string name="app_name">Card Emulator</string>
+
+    <!-- Card list -->
+    <string name="cards">Cards</string>
+    <string name="card_is_active">%1$s is active</string>
+    <string name="no_active_card">No card active</string>
+    <string name="add_card">Add card</string>
+    <string name="active">Active</string>
+    <string name="default_card">Default</string>
+    <string name="card_options">Card options</string>
+    <string name="set_as_default">Set as default</string>
+    <string name="remove_default">Remove default</string>
+    <string name="list_hint">Tap a card to activate it.\nTouch and hold to set a default.</string>
+
+    <!-- Add card -->
+    <string name="back">Back</string>
+    <string name="name">Name</string>
+    <string name="enter_uid">Enter UID</string>
+    <string name="scan_card">Scan card</string>
+    <plurals name="bytes">
+        <item quantity="one">%d byte</item>
+        <item quantity="other">%d bytes</item>
+    </plurals>
+    <string name="uid_hex">UID (hex)</string>
+    <!-- The quantity is the UID size (%2$d), not the progress so far. -->
+    <plurals name="uid_progress">
+        <item quantity="one">%1$d of %2$d byte</item>
+        <item quantity="other">%1$d of %2$d bytes</item>
+    </plurals>
+    <string name="uid_complete">UID complete</string>
+    <string name="scan_ready">Ready to scan</string>
+    <string name="scan_instruction">Hold your card against the back of the phone.</string>
+    <string name="scan_done">Card read</string>
+    <string name="uid_size">%d-byte UID</string>
+    <string name="scan_again">Scan again</string>
+</resources>

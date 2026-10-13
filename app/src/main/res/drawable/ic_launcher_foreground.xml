@@ -1,0 +1,18 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- ic_contactless scaled up around the centre of the adaptive-icon safe zone. -->
+    <group
+        android:scaleX="2.6"
+        android:scaleY="2.6"
+        android:translateX="22.8"
+        android:translateY="22.8">
+        <path
+            android:pathData="M7.43,9.17A4,4 0,0 1,7.43 14.83M10.26,6.34A8,8 0,0 1,10.26 17.66M13.09,3.51A12,12 0,0 1,13.09 20.49"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeLineCap="round"
+            android:strokeWidth="2" />
+    </group>
+</vector>
