@@ -7,9 +7,16 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.AnchoredDraggableDefaults
+import androidx.compose.foundation.gestures.AnchoredDraggableState
+import androidx.compose.foundation.gestures.DraggableAnchors
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.anchoredDraggable
+import androidx.compose.foundation.gestures.animateTo
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -22,11 +29,13 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material3.DropdownMenuGroup
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.DropdownMenuPopup
 import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.FilledTonalIconToggleButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LargeFlexibleTopAppBar
@@ -38,6 +47,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -45,8 +56,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -54,6 +68,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.offset
+import kotlin.math.roundToInt
 
 @Composable
 fun CardListScreen(
@@ -63,9 +79,12 @@ fun CardListScreen(
     onToggleActive: (String) -> Unit,
     onToggleDefault: (String) -> Unit,
     onAddCard: () -> Unit,
+    onEditCard: (String) -> Unit,
 ) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val activeName = cards.find { it.id == activeId }?.name
+    // The card whose swipe menu is open. Held here so that opening one closes any other.
+    var swipedCardId by remember { mutableStateOf<String?>(null) }
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -108,14 +127,19 @@ fun CardListScreen(
                     card = card,
                     active = card.id == activeId,
                     isDefault = card.id == defaultId,
+                    swipeMenuOpen = card.id == swipedCardId,
+                    onSwipeMenuOpenChange = { open ->
+                        if (open) swipedCardId = card.id else if (swipedCardId == card.id) swipedCardId = null
+                    },
                     onToggleActive = { onToggleActive(card.id) },
                     onToggleDefault = { onToggleDefault(card.id) },
+                    onEdit = { onEditCard(card.id) },
                     modifier = Modifier.animateItem(),
                 )
             }
             item(span = { GridItemSpan(maxLineSpan) }) {
                 Text(
-                    text = stringResource(R.string.list_hint),
+                    text = stringResource(if (cards.isEmpty()) R.string.list_empty else R.string.list_hint),
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(24.dp),
@@ -128,31 +152,119 @@ fun CardListScreen(
     }
 }
 
-/** Shows the name only; the UID stays hidden. Tap toggles active, touch and hold opens the default menu. */
+private enum class SwipeMenu { Closed, Open }
+
+private val SwipeActionSize = 56.dp
+private val SwipeActionGap = 12.dp
+
+/** How far a swiped card gives way: its two action buttons, each with a gap before it. */
+private val SwipeMenuWidth = (SwipeActionSize + SwipeActionGap) * 2
+
+/**
+ * Shows the name only; the UID stays hidden. Tap toggles active. The default toggle and Edit are
+ * reached either by swiping the card aside or from the touch-and-hold menu.
+ */
 @Composable
 private fun CardRow(
     card: SavedCard,
     active: Boolean,
     isDefault: Boolean,
+    swipeMenuOpen: Boolean,
+    onSwipeMenuOpenChange: (Boolean) -> Unit,
     onToggleActive: () -> Unit,
     onToggleDefault: () -> Unit,
+    onEdit: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val haptics = LocalHapticFeedback.current
     val colorScheme = MaterialTheme.colorScheme
     var menuOpen by remember { mutableStateOf(false) }
 
-    Box(modifier) {
+    val swipeWidthPx = with(LocalDensity.current) { SwipeMenuWidth.toPx() }
+    val swipe = remember(swipeWidthPx) {
+        AnchoredDraggableState(
+            initialValue = SwipeMenu.Closed,
+            anchors = DraggableAnchors {
+                SwipeMenu.Closed at 0f
+                SwipeMenu.Open at -swipeWidthPx
+            },
+        )
+    }
+    val swiped by remember(swipe) { derivedStateOf { -swipe.offset >= 1f } }
+    // Report where a swipe settles, and close again when told to (another card opened, or a tap).
+    LaunchedEffect(swipe.settledValue) { onSwipeMenuOpenChange(swipe.settledValue == SwipeMenu.Open) }
+    LaunchedEffect(swipeMenuOpen) { if (!swipeMenuOpen) swipe.animateTo(SwipeMenu.Closed) }
+
+    Box(
+        modifier.anchoredDraggable(
+            state = swipe,
+            orientation = Orientation.Horizontal,
+            flingBehavior = AnchoredDraggableDefaults.flingBehavior(
+                state = swipe,
+                animationSpec = MaterialTheme.motionScheme.fastSpatialSpec(),
+            ),
+        ),
+    ) {
+        // Only composed while swiped, so the actions are never reachable underneath a closed card.
+        if (swiped) {
+            Row(
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .graphicsLayer {
+                        // Grows into the space the card gives up.
+                        val progress = (-swipe.offset / swipeWidthPx).coerceIn(0f, 1f)
+                        alpha = progress
+                        scaleX = 0.5f + progress / 2
+                        scaleY = 0.5f + progress / 2
+                    },
+                horizontalArrangement = Arrangement.spacedBy(SwipeActionGap),
+            ) {
+                FilledTonalIconToggleButton(
+                    checked = isDefault,
+                    onCheckedChange = {
+                        onToggleDefault()
+                        onSwipeMenuOpenChange(false)
+                    },
+                    shapes = IconButtonDefaults.toggleableShapes(),
+                    modifier = Modifier.size(SwipeActionSize),
+                ) {
+                    Icon(Icons.Rounded.Star, contentDescription = stringResource(R.string.default_card))
+                }
+                FilledTonalIconButton(
+                    onClick = {
+                        onSwipeMenuOpenChange(false)
+                        onEdit()
+                    },
+                    shapes = IconButtonDefaults.shapes(),
+                    modifier = Modifier.size(SwipeActionSize),
+                ) {
+                    Icon(Icons.Rounded.Edit, contentDescription = stringResource(R.string.edit))
+                }
+            }
+        }
+
         ListItem(
             checked = active,
             onCheckedChange = { nowActive ->
-                haptics.performHapticFeedback(
-                    if (nowActive) HapticFeedbackType.ToggleOn else HapticFeedbackType.ToggleOff,
-                )
-                onToggleActive()
+                if (swipeMenuOpen) {
+                    // A tap on a swiped card only puts it back.
+                    onSwipeMenuOpenChange(false)
+                } else {
+                    haptics.performHapticFeedback(
+                        if (nowActive) HapticFeedbackType.ToggleOn else HapticFeedbackType.ToggleOff,
+                    )
+                    onToggleActive()
+                }
             },
-            // Tall enough that showing or hiding the "Default" line never changes the row height.
-            modifier = Modifier.heightIn(min = 88.dp),
+            modifier = Modifier
+                // Swiping squeezes the card from its end edge rather than sliding it out of the row.
+                .layout { measurable, constraints ->
+                    val given = (-swipe.offset).roundToInt().coerceIn(0, constraints.maxWidth)
+                    val placeable = measurable.measure(constraints.offset(horizontal = -given))
+                    layout(constraints.maxWidth, placeable.height) { placeable.placeRelative(0, 0) }
+                }
+                // Tall enough that showing or hiding the "Default" line never changes the row height.
+                .heightIn(min = 88.dp),
             leadingContent = { CardBadge(active) },
             supportingContent = {
                 AnimatedVisibility(isDefault) { Text(stringResource(R.string.default_card)) }
@@ -198,8 +310,17 @@ private fun CardRow(
                     text = {
                         Text(stringResource(if (isDefault) R.string.remove_default else R.string.set_as_default))
                     },
-                    shape = MenuDefaults.standaloneItemShape,
+                    shape = MenuDefaults.leadingItemShape,
                     leadingIcon = { Icon(Icons.Rounded.Star, contentDescription = null) },
+                )
+                DropdownMenuItem(
+                    onClick = {
+                        menuOpen = false
+                        onEdit()
+                    },
+                    text = { Text(stringResource(R.string.edit)) },
+                    shape = MenuDefaults.trailingItemShape,
+                    leadingIcon = { Icon(Icons.Rounded.Edit, contentDescription = null) },
                 )
             }
         }
@@ -242,6 +363,7 @@ private fun CardListScreenPreview() {
             onToggleActive = {},
             onToggleDefault = {},
             onAddCard = {},
+            onEditCard = {},
         )
     }
 }

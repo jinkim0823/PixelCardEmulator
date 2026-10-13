@@ -11,10 +11,21 @@
     <string name="card_options">Card options</string>
     <string name="set_as_default">Set as default</string>
     <string name="remove_default">Remove default</string>
-    <string name="list_hint">Tap a card to activate it.\nTouch and hold to set a default.</string>
+    <string name="edit">Edit</string>
+    <string name="list_hint">Tap a card to activate it.\nSwipe or touch and hold for more.</string>
+    <string name="list_empty">No cards yet.\nUse the + button to add one.</string>
 
-    <!-- Add card -->
+    <!-- Add or edit card -->
     <string name="back">Back</string>
+    <string name="edit_card">Edit card</string>
+    <string name="save">Save</string>
+    <string name="uid_hidden">Hidden</string>
+    <string name="show">Show</string>
+    <string name="delete_card">Delete card</string>
+    <string name="delete_card_title">Delete “%1$s”?</string>
+    <string name="delete_card_message">This removes the card from your list.</string>
+    <string name="delete">Delete</string>
+    <string name="cancel">Cancel</string>
     <string name="name">Name</string>
     <string name="enter_uid">Enter UID</string>
     <string name="scan_card">Scan card</string>

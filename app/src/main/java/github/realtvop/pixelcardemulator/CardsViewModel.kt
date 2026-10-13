@@ -11,7 +11,10 @@ data class SavedCard(
     val name: String,
     val uid: String,
     val id: String = UUID.randomUUID().toString(),
-)
+) {
+    /** UID length in bytes: 4, 7 or 10. */
+    val uidSize: Int get() = uid.length / 2
+}
 
 val MockCards = listOf(
     SavedCard("Office", "9C4E21B7"),
@@ -43,5 +46,15 @@ class CardsViewModel : ViewModel() {
 
     fun add(name: String, uid: String) {
         cards = cards + SavedCard(name, uid)
+    }
+
+    fun update(id: String, name: String, uid: String) {
+        cards = cards.map { if (it.id == id) it.copy(name = name, uid = uid) else it }
+    }
+
+    fun delete(id: String) {
+        cards = cards.filterNot { it.id == id }
+        if (activeId == id) activeId = null
+        if (defaultId == id) defaultId = null
     }
 }

@@ -29,12 +29,16 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
@@ -84,20 +88,30 @@ private const val SimulatedScanMillis = 2500L
 /** Keeps the form from stretching across unfolded or landscape screens. */
 private val FormMaxWidth = 560.dp
 
+/** Adds a new card when [card] is null; otherwise shows that saved card so it can be changed or deleted. */
 @Composable
-fun AddCardScreen(
+fun CardEditorScreen(
+    card: SavedCard?,
     onBack: () -> Unit,
     onSave: (name: String, uid: String) -> Unit,
+    onDelete: () -> Unit,
 ) {
     val haptics = LocalHapticFeedback.current
-    val name = rememberTextFieldState()
-    val typedUid = rememberTextFieldState()
+    val name = rememberTextFieldState(card?.name.orEmpty())
+    val typedUid = rememberTextFieldState(card?.uid.orEmpty())
     var scanMode by rememberSaveable { mutableStateOf(false) }
-    var uidSize by rememberSaveable { mutableIntStateOf(UidSizes.first()) }
+    var uidSize by rememberSaveable { mutableIntStateOf(card?.uidSize ?: UidSizes.first()) }
     var scannedUid by rememberSaveable { mutableStateOf<String?>(null) }
+    // A saved UID stays hidden until it is asked for; a new card has nothing to hide.
+    var uidShown by rememberSaveable { mutableStateOf(card == null) }
+    var confirmingDelete by rememberSaveable { mutableStateOf(false) }
 
-    // Null until the chosen source has produced a complete UID.
-    val uid = if (scanMode) scannedUid else typedUid.text.toString().takeIf { it.length == uidSize * 2 }
+    // Null until the chosen source has produced a complete UID. A saved UID left hidden is kept as is.
+    val uid = when {
+        !uidShown -> card?.uid
+        scanMode -> scannedUid
+        else -> typedUid.text.toString().takeIf { it.length == uidSize * 2 }
+    }
 
     // Stands in for a real NFC read: a card "arrives" shortly after scanning starts.
     if (scanMode && scannedUid == null) {
@@ -112,13 +126,20 @@ fun AddCardScreen(
         modifier = Modifier.imePadding(),
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.add_card)) },
+                title = { Text(stringResource(if (card == null) R.string.add_card else R.string.edit_card)) },
                 navigationIcon = {
                     IconButton(onClick = onBack, shapes = IconButtonDefaults.shapes()) {
                         Icon(
                             Icons.AutoMirrored.Rounded.ArrowBack,
                             contentDescription = stringResource(R.string.back),
                         )
+                    }
+                },
+                actions = {
+                    if (card != null) {
+                        IconButton(onClick = { confirmingDelete = true }, shapes = IconButtonDefaults.shapes()) {
+                            Icon(Icons.Rounded.Delete, contentDescription = stringResource(R.string.delete_card))
+                        }
                     }
                 },
             )
@@ -142,7 +163,10 @@ fun AddCardScreen(
                     enabled = name.text.isNotBlank() && uid != null,
                     contentPadding = ButtonDefaults.contentPaddingFor(height),
                 ) {
-                    Text(stringResource(R.string.add_card), style = ButtonDefaults.textStyleFor(height))
+                    Text(
+                        text = stringResource(if (card == null) R.string.add_card else R.string.save),
+                        style = ButtonDefaults.textStyleFor(height),
+                    )
                 }
             }
         },
@@ -172,28 +196,85 @@ fun AddCardScreen(
                     shape = MaterialTheme.shapes.large,
                 )
 
-                ConnectedChoice(
-                    options = listOf(stringResource(R.string.enter_uid), stringResource(R.string.scan_card)),
-                    selectedIndex = if (scanMode) 1 else 0,
-                    onSelect = { scanMode = it == 1 },
-                )
+                AnimatedContent(targetState = uidShown, label = "uid") { shown ->
+                    if (shown) {
+                        Column(verticalArrangement = Arrangement.spacedBy(24.dp)) {
+                            ConnectedChoice(
+                                options = listOf(
+                                    stringResource(R.string.enter_uid),
+                                    stringResource(R.string.scan_card),
+                                ),
+                                selectedIndex = if (scanMode) 1 else 0,
+                                onSelect = { scanMode = it == 1 },
+                            )
 
-                AnimatedContent(targetState = scanMode, label = "uidSource") { scanning ->
-                    if (scanning) {
-                        ScanPanel(scannedUid = scannedUid, onScanAgain = { scannedUid = null })
+                            AnimatedContent(targetState = scanMode, label = "uidSource") { scanning ->
+                                if (scanning) {
+                                    ScanPanel(scannedUid = scannedUid, onScanAgain = { scannedUid = null })
+                                } else {
+                                    ManualUidEntry(
+                                        uid = typedUid,
+                                        size = uidSize,
+                                        onSizeChange = { newSize ->
+                                            uidSize = newSize
+                                            typedUid.edit { if (length > newSize * 2) delete(newSize * 2, length) }
+                                        },
+                                    )
+                                }
+                            }
+                        }
                     } else {
-                        ManualUidEntry(
-                            uid = typedUid,
-                            size = uidSize,
-                            onSizeChange = { newSize ->
-                                uidSize = newSize
-                                typedUid.edit { if (length > newSize * 2) delete(newSize * 2, length) }
-                            },
-                        )
+                        HiddenUid(size = uidSize, onShow = { uidShown = true })
                     }
                 }
             }
         }
+    }
+
+    if (card != null && confirmingDelete) {
+        AlertDialog(
+            onDismissRequest = { confirmingDelete = false },
+            title = { Text(stringResource(R.string.delete_card_title, card.name)) },
+            text = { Text(stringResource(R.string.delete_card_message)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        confirmingDelete = false
+                        onDelete()
+                    },
+                    shapes = ButtonDefaults.shapes(),
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                ) {
+                    Text(stringResource(R.string.delete))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmingDelete = false }, shapes = ButtonDefaults.shapes()) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
+        )
+    }
+}
+
+/** Stands in for a saved card's UID until the user asks to see it. */
+@Composable
+private fun HiddenUid(
+    size: Int,
+    onShow: () -> Unit,
+) {
+    ListItem(
+        supportingContent = { Text(stringResource(R.string.uid_hidden)) },
+        trailingContent = {
+            TextButton(onClick = onShow, shapes = ButtonDefaults.shapes()) {
+                Text(stringResource(R.string.show))
+            }
+        },
+        verticalAlignment = Alignment.CenterVertically,
+        shapes = ListItemDefaults.shapes(shape = MaterialTheme.shapes.large),
+        colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+    ) {
+        Text(stringResource(R.string.uid_size, size))
     }
 }
 
@@ -365,8 +446,16 @@ private fun randomUid(): String =
 
 @PreviewLightDark
 @Composable
-private fun AddCardScreenPreview() {
+private fun AddCardPreview() {
     PixelCardTheme {
-        AddCardScreen(onBack = {}, onSave = { _, _ -> })
+        CardEditorScreen(card = null, onBack = {}, onSave = { _, _ -> }, onDelete = {})
+    }
+}
+
+@PreviewLightDark
+@Composable
+private fun EditCardPreview() {
+    PixelCardTheme {
+        CardEditorScreen(card = MockCards[1], onBack = {}, onSave = { _, _ -> }, onDelete = {})
     }
 }

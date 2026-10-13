@@ -15,9 +15,13 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.IntOffset
+
+/** Editor target for a card that does not exist yet. Never collides with an id, which is a UUID. */
+private const val NewCard = "new"
 
 class MainActivity : ComponentActivity() {
     private val viewModel: CardsViewModel by viewModels()
@@ -27,38 +31,47 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             PixelCardTheme {
-                // Two screens only, so a flag stands in for a navigation library.
-                var addingCard by rememberSaveable { mutableStateOf(false) }
-                BackHandler(enabled = addingCard) { addingCard = false }
+                // Two screens only, so one value stands in for a navigation library: null shows the
+                // list, anything else opens the editor on the card with that id, or on a new card.
+                var editorTarget by rememberSaveable { mutableStateOf<String?>(null) }
+                BackHandler(enabled = editorTarget != null) { editorTarget = null }
 
                 val slide = MaterialTheme.motionScheme.defaultEffectsSpec<IntOffset>()
                 val fade = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
                 AnimatedContent(
-                    targetState = addingCard,
+                    targetState = editorTarget,
                     transitionSpec = {
-                        // The add screen enters from the end edge and leaves the way it came.
-                        val direction = if (targetState) 1 else -1
+                        // The editor enters from the end edge and leaves the way it came.
+                        val direction = if (targetState != null) 1 else -1
                         (slideInHorizontally(slide) { direction * it / 6 } + fadeIn(fade)) togetherWith
                             (slideOutHorizontally(slide) { -direction * it / 6 } + fadeOut(fade))
                     },
                     label = "screen",
-                ) { adding ->
-                    if (adding) {
-                        AddCardScreen(
-                            onBack = { addingCard = false },
-                            onSave = { name, uid ->
-                                viewModel.add(name, uid)
-                                addingCard = false
-                            },
-                        )
-                    } else {
+                ) { target ->
+                    if (target == null) {
                         CardListScreen(
                             cards = viewModel.cards,
                             activeId = viewModel.activeId,
                             defaultId = viewModel.defaultId,
                             onToggleActive = viewModel::toggleActive,
                             onToggleDefault = viewModel::toggleDefault,
-                            onAddCard = { addingCard = true },
+                            onAddCard = { editorTarget = NewCard },
+                            onEditCard = { editorTarget = it },
+                        )
+                    } else {
+                        // Remembered so the screen still shows the card while it animates out after a delete.
+                        val card = remember { viewModel.cards.find { it.id == target } }
+                        CardEditorScreen(
+                            card = card,
+                            onBack = { editorTarget = null },
+                            onSave = { name, uid ->
+                                if (card == null) viewModel.add(name, uid) else viewModel.update(card.id, name, uid)
+                                editorTarget = null
+                            },
+                            onDelete = {
+                                card?.let { viewModel.delete(it.id) }
+                                editorTarget = null
+                            },
                         )
                     }
                 }
