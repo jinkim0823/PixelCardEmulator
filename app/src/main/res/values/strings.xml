@@ -13,16 +13,14 @@
     <string name="back">Back</string>
     <string name="edit_card">Edit card</string>
     <string name="save">Save</string>
-    <string name="uid_hidden">Hidden</string>
-    <string name="show">Show</string>
-    <string name="hide">Hide</string>
+    <string name="show_uid">Show UID</string>
+    <string name="hide_uid">Hide UID</string>
     <string name="delete_card">Delete card</string>
     <string name="delete_card_title">Delete “%1$s”?</string>
     <string name="delete_card_message">This removes the card from your list.</string>
     <string name="delete">Delete</string>
     <string name="cancel">Cancel</string>
     <string name="name">Name</string>
-    <string name="enter_uid">Enter UID</string>
     <string name="scan_card">Scan card</string>
     <plurals name="bytes">
         <item quantity="one">%d byte</item>
@@ -34,12 +32,7 @@
         <item quantity="one">%1$d of %2$d byte</item>
         <item quantity="other">%1$d of %2$d bytes</item>
     </plurals>
-    <string name="uid_complete">UID complete</string>
-    <string name="scan_ready">Ready to scan</string>
     <string name="scan_instruction">Hold your card against the back of the phone.</string>
-    <string name="scan_done">Card read</string>
-    <string name="uid_size">%d-byte UID</string>
-    <string name="scan_again">Scan again</string>
     <string name="nfc_unavailable">This device does not have NFC.</string>
     <string name="nfc_disabled">Turn on NFC to scan a card.</string>
     <string name="unsupported_uid_length">Only 4, 7, or 10-byte NFC-A UIDs are supported.</string>
