@@ -13,6 +13,7 @@ private const val CoordinatorPreferences = "nfc_emulation_state"
 private const val ActiveBackendKey = "active_backend"
 private const val ExperimentalFingerprintKey = "experimental_raw_fingerprint"
 private const val ForceRawKey = "force_raw"
+internal const val NfcFieldResetDelayMillis = 250L
 
 internal interface NfcCardEmulationBackend {
     val isSupported: Boolean
@@ -23,6 +24,7 @@ internal interface NfcCardEmulationBackend {
 /** Android 15+'s system-service implementation of NFC-A identity emulation. */
 private class OemNfcCardEmulator(private val context: Context) : NfcCardEmulationBackend {
     private val adapter: NfcAdapter? = context.getSystemService(NfcManager::class.java)?.defaultAdapter
+    private val pollingControl = PollingControl(context, adapter)
 
     override val isSupported: Boolean
         get() = runCatching { resolveApi(requireEnabled = false) }.isSuccess
@@ -30,27 +32,36 @@ private class OemNfcCardEmulator(private val context: Context) : NfcCardEmulatio
     override fun activate(uid: ByteArray) {
         require(uid.size in SupportedUidSizes) { "Unsupported UID length" }
         val api = resolveApi()
-        invoke(
-            api,
-            enabled = true,
-            bitFrameSdd = 0x04,
-            platformConfig = 0x00,
-            selInfo = 0x00,
-            nfcid1 = uid,
-            rats = 0x00,
-        )
+        pollingControl.withBestEffortPause(NfcFieldResetDelayMillis) {
+            invoke(
+                api,
+                enabled = true,
+                bitFrameSdd = 0x04,
+                platformConfig = 0x00,
+                selInfo = 0x00,
+                nfcid1 = uid,
+                rats = 0x00,
+            )
+        }
     }
 
     override fun deactivate() {
-        invoke(
-            resolveApi(),
-            enabled = false,
-            bitFrameSdd = 0x00,
-            platformConfig = 0x00,
-            selInfo = 0x00,
-            nfcid1 = ByteArray(0),
-            rats = 0x00,
-        )
+        val api = resolveApi()
+        pollingControl.withBestEffortPause(NfcFieldResetDelayMillis) {
+            invoke(
+                api,
+                enabled = false,
+                bitFrameSdd = 0x00,
+                platformConfig = 0x00,
+                selInfo = 0x00,
+                nfcid1 = ByteArray(0),
+                rats = 0x00,
+            )
+        }
+    }
+
+    fun setActivity(activity: android.app.Activity?) {
+        pollingControl.setActivity(activity)
     }
 
     private fun resolveApi(requireEnabled: Boolean = true): Api {
@@ -143,6 +154,7 @@ class NfcEmulationCoordinator(private val context: Context) {
             preferences.getString(ExperimentalFingerprintKey, null) != Build.FINGERPRINT
 
     fun setActivity(activity: android.app.Activity?) {
+        oem.setActivity(activity)
         raw.setActivity(activity)
     }
 

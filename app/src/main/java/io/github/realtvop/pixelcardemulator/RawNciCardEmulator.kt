@@ -109,13 +109,13 @@ internal class RawNciCardEmulator(private val context: Context) : NfcCardEmulati
         }
 
         val profile = RawNfcDeviceCatalog.profile
-        pollingControl.withPaused {
+        pollingControl.withPaused(NfcFieldResetDelayMillis) {
             setPreferredConfiguration(uid, profile)
             requireUid(uid, R.string.raw_uid_not_retained)
         }
 
         if (!uidMatches(uid)) {
-            pollingControl.withPaused {
+            pollingControl.withPaused(NfcFieldResetDelayMillis) {
                 setPreferredConfiguration(uid, profile)
                 Thread.sleep(120)
                 requireUid(uid, R.string.raw_uid_overwritten_after_resume)
@@ -364,19 +364,35 @@ private class RawNciTransport(private val context: Context, private val adapter:
     }
 }
 
-private class PollingControl(private val context: Context, private val adapter: NfcAdapter?) {
+internal class PollingControl(private val context: Context, private val adapter: NfcAdapter?) {
     private var activity = WeakReference<Activity>(null)
 
     fun setActivity(value: Activity?) {
         activity = WeakReference(value)
     }
 
-    fun <T> withPaused(block: () -> T): T {
-        val resume = pause()
+    fun <T> withPaused(minimumPauseMillis: Long = 0, block: () -> T): T =
+        runPaused(pause(), minimumPauseMillis, block)
+
+    fun <T> withBestEffortPause(minimumPauseMillis: Long = 0, block: () -> T): T {
+        val resume = runCatching(::pause).getOrNull() ?: return block()
+        return runPaused(resume, minimumPauseMillis, block)
+    }
+
+    private fun <T> runPaused(resume: () -> Unit, minimumPauseMillis: Long, block: () -> T): T {
+        val pausedAt = System.nanoTime()
         return try {
             block()
         } finally {
-            resume()
+            val elapsedMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - pausedAt)
+            val remainingMillis = minimumPauseMillis - elapsedMillis
+            try {
+                if (remainingMillis > 0) Thread.sleep(remainingMillis)
+            } catch (_: InterruptedException) {
+                Thread.currentThread().interrupt()
+            } finally {
+                resume()
+            }
         }
     }
 
