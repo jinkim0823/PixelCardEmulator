@@ -1,7 +1,10 @@
 package io.github.realtvop.pixelcardemulator
 
 import android.Manifest
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.os.Handler
@@ -28,9 +31,15 @@ class CardPickerActivity : ComponentActivity() {
     private var cards by mutableStateOf(emptyList<SavedCard>())
     private var defaultId by mutableStateOf<String?>(null)
     private var activeId by mutableStateOf<String?>(null)
+    private val screenOffReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (intent.action == Intent.ACTION_SCREEN_OFF) finish()
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        registerReceiver(screenOffReceiver, IntentFilter(Intent.ACTION_SCREEN_OFF), Context.RECEIVER_EXPORTED)
         refreshCards()
         setShowWhenLocked(true)
         setTurnScreenOn(true)
@@ -115,6 +124,7 @@ class CardPickerActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        unregisterReceiver(screenOffReceiver)
         executor.shutdownNow()
         super.onDestroy()
     }
