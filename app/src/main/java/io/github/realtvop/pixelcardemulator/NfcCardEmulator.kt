@@ -13,6 +13,7 @@ private const val CoordinatorPreferences = "nfc_emulation_state"
 private const val ActiveBackendKey = "active_backend"
 private const val ExperimentalFingerprintKey = "experimental_raw_fingerprint"
 private const val ForceRawKey = "force_raw"
+private const val RestartDiscoveryAfterSwitchKey = "restart_discovery_after_switch"
 internal const val NfcFieldResetDelayMillis = 250L
 
 internal interface NfcCardEmulationBackend {
@@ -22,7 +23,10 @@ internal interface NfcCardEmulationBackend {
 }
 
 /** Android 15+'s system-service implementation of NFC-A identity emulation. */
-private class OemNfcCardEmulator(private val context: Context) : NfcCardEmulationBackend {
+private class OemNfcCardEmulator(
+    private val context: Context,
+    private val shouldRestartDiscovery: () -> Boolean,
+) : NfcCardEmulationBackend {
     private val adapter: NfcAdapter? = context.getSystemService(NfcManager::class.java)?.defaultAdapter
     private val pollingControl = PollingControl(context, adapter)
 
@@ -32,7 +36,7 @@ private class OemNfcCardEmulator(private val context: Context) : NfcCardEmulatio
     override fun activate(uid: ByteArray) {
         require(uid.size in SupportedUidSizes) { "Unsupported UID length" }
         val api = resolveApi()
-        pollingControl.withBestEffortPause(NfcFieldResetDelayMillis) {
+        withOptionalDiscoveryRestart {
             invoke(
                 api,
                 enabled = true,
@@ -47,7 +51,7 @@ private class OemNfcCardEmulator(private val context: Context) : NfcCardEmulatio
 
     override fun deactivate() {
         val api = resolveApi()
-        pollingControl.withBestEffortPause(NfcFieldResetDelayMillis) {
+        withOptionalDiscoveryRestart {
             invoke(
                 api,
                 enabled = false,
@@ -63,6 +67,13 @@ private class OemNfcCardEmulator(private val context: Context) : NfcCardEmulatio
     fun setActivity(activity: android.app.Activity?) {
         pollingControl.setActivity(activity)
     }
+
+    private fun <T> withOptionalDiscoveryRestart(block: () -> T): T =
+        if (shouldRestartDiscovery()) {
+            pollingControl.withBestEffortPause(NfcFieldResetDelayMillis, block)
+        } else {
+            block()
+        }
 
     private fun resolveApi(requireEnabled: Boolean = true): Api {
         val nfcAdapter = adapter ?: throw NfcEmulationException(context.getString(R.string.nfc_unavailable))
@@ -132,8 +143,8 @@ private class OemNfcCardEmulator(private val context: Context) : NfcCardEmulatio
 /** Chooses the official system route first and retains the chosen backend until restore. */
 class NfcEmulationCoordinator(private val context: Context) {
     private val preferences = context.getSharedPreferences(CoordinatorPreferences, Context.MODE_PRIVATE)
-    private val oem = OemNfcCardEmulator(context)
-    private val raw = RawNciCardEmulator(context)
+    private val oem = OemNfcCardEmulator(context) { restartDiscoveryAfterSwitch }
+    private val raw = RawNciCardEmulator(context) { restartDiscoveryAfterSwitch }
 
     val isSupported: Boolean
         get() = oem.isSupported || raw.isSupported
@@ -146,6 +157,14 @@ class NfcEmulationCoordinator(private val context: Context) {
         set(value) {
             check(preferences.edit().putBoolean(ForceRawKey, value).commit()) {
                 "Could not save raw NFC preference"
+            }
+        }
+
+    var restartDiscoveryAfterSwitch: Boolean
+        get() = preferences.getBoolean(RestartDiscoveryAfterSwitchKey, true)
+        set(value) {
+            check(preferences.edit().putBoolean(RestartDiscoveryAfterSwitchKey, value).commit()) {
+                "Could not save NFC discovery restart preference"
             }
         }
 

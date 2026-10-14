@@ -15,6 +15,7 @@ import java.util.concurrent.Executors
 
 data class EmulatorUiState(
     val busy: Boolean = false,
+    val busyCardId: String? = null,
     val status: String? = null,
     val permissionRequired: Boolean = false,
     val permissionGrantBusy: Boolean = false,
@@ -106,6 +107,9 @@ class CardsViewModel(application: Application) : AndroidViewModel(application) {
     var forceRaw by mutableStateOf(emulator.forceRaw)
         private set
 
+    var restartDiscoveryAfterSwitch by mutableStateOf(emulator.restartDiscoveryAfterSwitch)
+        private set
+
     val grantCommand: String
         get() = "adb shell pm grant ${getApplication<Application>().packageName} " +
             "android.permission.WRITE_SECURE_SETTINGS"
@@ -149,6 +153,11 @@ class CardsViewModel(application: Application) : AndroidViewModel(application) {
     fun toggleForceRaw() {
         forceRaw = !forceRaw
         emulator.forceRaw = forceRaw
+    }
+
+    fun toggleRestartDiscoveryAfterSwitch() {
+        restartDiscoveryAfterSwitch = !restartDiscoveryAfterSwitch
+        emulator.restartDiscoveryAfterSwitch = restartDiscoveryAfterSwitch
     }
 
     /** Read from the system each time, so a language picked in system settings shows here too. */
@@ -279,6 +288,7 @@ class CardsViewModel(application: Application) : AndroidViewModel(application) {
 
         emulatorUiState = EmulatorUiState(
             busy = true,
+            busyCardId = (action as? PendingAction.Activate)?.card?.id,
             status = when (action) {
                 is PendingAction.Activate -> localized(R.string.status_activating, action.card.name)
                 is PendingAction.Deactivate -> localized(R.string.status_restoring)

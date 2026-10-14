@@ -146,6 +146,7 @@ class MainActivity : ComponentActivity() {
                     CardListScreen(
                         cards = viewModel.cards,
                         activeId = viewModel.activeId,
+                        busyCardId = viewModel.emulatorUiState.busyCardId,
                         defaultId = viewModel.defaultId,
                         onToggleActive = viewModel::toggleActive,
                         onToggleDefault = viewModel::toggleDefault,
@@ -153,6 +154,8 @@ class MainActivity : ComponentActivity() {
                         onEditCard = { openEditor(it) },
                         forceRaw = viewModel.forceRaw,
                         onToggleForceRaw = viewModel::toggleForceRaw,
+                        restartDiscoveryAfterSwitch = viewModel.restartDiscoveryAfterSwitch,
+                        onToggleRestartDiscoveryAfterSwitch = viewModel::toggleRestartDiscoveryAfterSwitch,
                         language = viewModel.language,
                         onLanguageSelected = viewModel::setLanguage,
                         showPermissionBanner = !viewModel.secureSettingsGranted && !viewModel.forceRaw,

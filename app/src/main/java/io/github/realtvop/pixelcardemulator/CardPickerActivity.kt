@@ -36,25 +36,26 @@ class CardPickerActivity : ComponentActivity() {
                 val cards = remember { store.loadCards() }
                 val defaultId = remember { store.loadDefaultCardId() }
                 var activeId by remember { mutableStateOf(store.loadActiveCardId()) }
-                var busyCardName by remember { mutableStateOf<String?>(null) }
+                var busyCardId by remember { mutableStateOf<String?>(null) }
                 var error by remember { mutableStateOf<String?>(null) }
 
                 CardListScreen(
                     cards = cards,
                     activeId = activeId,
+                    busyCardId = busyCardId,
                     defaultId = defaultId,
                     onToggleActive = select@{ id ->
-                        if (busyCardName != null) return@select
+                        if (busyCardId != null) return@select
                         if (id == activeId) {
                             return@select
                         }
                         val selected = cards.find { it.id == id } ?: return@select
                         val previous = cards.find { it.id == activeId }
-                        busyCardName = selected.name
+                        busyCardId = selected.id
                         executor.execute {
                             val failure = switchCard(selected, previous)
                             mainHandler.post {
-                                busyCardName = null
+                                busyCardId = null
                                 if (failure == null) {
                                     activeId = selected.id
                                     NfcFieldReceiver.markSelectionCompleted(this@CardPickerActivity)
@@ -70,13 +71,6 @@ class CardPickerActivity : ComponentActivity() {
                     managementEnabled = false,
                 )
 
-                busyCardName?.let { name ->
-                    AlertDialog(
-                        onDismissRequest = {},
-                        title = { Text(stringResource(R.string.status_activating, name)) },
-                        confirmButton = {},
-                    )
-                }
                 error?.let { message ->
                     AlertDialog(
                         onDismissRequest = { error = null },

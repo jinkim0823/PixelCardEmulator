@@ -72,6 +72,7 @@
     <string name="more_options">More options</string>
     <string name="automatic_card_picker">Show card picker when read</string>
     <string name="raw_nci_mode">Raw NCI mode</string>
+    <string name="brief_disconnect_on_card_switch">Disconnect NFC for 250 ms when switching</string>
     <string name="enabled">Enabled</string>
     <string name="set_up">Set up</string>
     <string name="language">Language</string>

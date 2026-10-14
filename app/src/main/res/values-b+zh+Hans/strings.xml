@@ -70,6 +70,7 @@
     <string name="more_options">更多选项</string>
     <string name="automatic_card_picker">读卡时弹出选卡</string>
     <string name="raw_nci_mode">原始 NCI 模式</string>
+    <string name="brief_disconnect_on_card_switch">切卡时断开 NFC 250 ms</string>
     <string name="enabled">已启用</string>
     <string name="set_up">设置</string>
     <string name="language">语言</string>

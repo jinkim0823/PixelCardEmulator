@@ -37,6 +37,7 @@ import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledTonalIconButton
@@ -88,6 +89,7 @@ private const val GitHubRepoUrl = "https://github.com/realtvop/PixelCardEmulator
 fun CardListScreen(
     cards: List<SavedCard>,
     activeId: String?,
+    busyCardId: String? = null,
     defaultId: String?,
     onToggleActive: (String) -> Unit,
     onToggleDefault: (String) -> Unit,
@@ -95,6 +97,8 @@ fun CardListScreen(
     onEditCard: (String) -> Unit,
     forceRaw: Boolean = false,
     onToggleForceRaw: () -> Unit = {},
+    restartDiscoveryAfterSwitch: Boolean = true,
+    onToggleRestartDiscoveryAfterSwitch: () -> Unit = {},
     language: AppLanguage = AppLanguage.SystemDefault,
     onLanguageSelected: (AppLanguage) -> Unit = {},
     showPermissionBanner: Boolean = false,
@@ -172,6 +176,21 @@ fun CardListScreen(
                                         },
                                     )
                                     DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.brief_disconnect_on_card_switch)) },
+                                        onClick = {
+                                            appMenuOpen = false
+                                            onToggleRestartDiscoveryAfterSwitch()
+                                        },
+                                        trailingIcon = {
+                                            if (restartDiscoveryAfterSwitch) {
+                                                Icon(
+                                                    Icons.Rounded.Check,
+                                                    contentDescription = stringResource(R.string.enabled),
+                                                )
+                                            }
+                                        },
+                                    )
+                                    DropdownMenuItem(
                                         text = { Text(stringResource(R.string.language)) },
                                         trailingIcon = {
                                             Text(
@@ -231,6 +250,7 @@ fun CardListScreen(
                     CardRow(
                         card = card,
                         active = card.id == activeId,
+                        busy = card.id == busyCardId,
                         isDefault = card.id == defaultId,
                         swipeMenuOpen = card.id == swipedCardId,
                         onSwipeMenuOpenChange = { open ->
@@ -332,6 +352,7 @@ private val SwipeMenuWidth = (SwipeActionSize + SwipeActionGap) * 2
 private fun CardRow(
     card: SavedCard,
     active: Boolean,
+    busy: Boolean,
     isDefault: Boolean,
     swipeMenuOpen: Boolean,
     onSwipeMenuOpenChange: (Boolean) -> Unit,
@@ -446,8 +467,15 @@ private fun CardRow(
                 AnimatedVisibility(isDefault) { Text(stringResource(R.string.default_card)) }
             },
             trailingContent = {
-                AnimatedVisibility(active, enter = fadeIn() + scaleIn(), exit = fadeOut() + scaleOut()) {
-                    Text(stringResource(R.string.active), style = MaterialTheme.typography.labelLarge)
+                if (busy) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        strokeWidth = 3.dp,
+                    )
+                } else {
+                    AnimatedVisibility(active, enter = fadeIn() + scaleIn(), exit = fadeOut() + scaleOut()) {
+                        Text(stringResource(R.string.active), style = MaterialTheme.typography.labelLarge)
+                    }
                 }
             },
             verticalAlignment = Alignment.CenterVertically,

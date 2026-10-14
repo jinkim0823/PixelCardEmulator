@@ -79,7 +79,10 @@ internal enum class RawProfile(
     CtsType4A(0x06, 0x0C, 0x20, 0x40),
 }
 
-internal class RawNciCardEmulator(private val context: Context) : NfcCardEmulationBackend {
+internal class RawNciCardEmulator(
+    private val context: Context,
+    private val shouldRestartDiscovery: () -> Boolean = { true },
+) : NfcCardEmulationBackend {
     private val preferences = context.getSharedPreferences(RawPreferences, Context.MODE_PRIVATE)
     private val adapter = context.getSystemService(NfcManager::class.java)?.defaultAdapter
     private val transport = RawNciTransport(context, adapter)
@@ -109,13 +112,13 @@ internal class RawNciCardEmulator(private val context: Context) : NfcCardEmulati
         }
 
         val profile = RawNfcDeviceCatalog.profile
-        pollingControl.withPaused(NfcFieldResetDelayMillis) {
+        pollingControl.withPaused(fieldResetDelayMillis()) {
             setPreferredConfiguration(uid, profile)
             requireUid(uid, R.string.raw_uid_not_retained)
         }
 
         if (!uidMatches(uid)) {
-            pollingControl.withPaused(NfcFieldResetDelayMillis) {
+            pollingControl.withPaused(fieldResetDelayMillis()) {
                 setPreferredConfiguration(uid, profile)
                 Thread.sleep(120)
                 requireUid(uid, R.string.raw_uid_overwritten_after_resume)
@@ -248,6 +251,9 @@ internal class RawNciCardEmulator(private val context: Context) : NfcCardEmulati
     private fun requireUid(uid: ByteArray, @StringRes messageRes: Int) {
         if (!uidMatches(uid)) throw NfcEmulationException(context.getString(messageRes))
     }
+
+    private fun fieldResetDelayMillis(): Long =
+        if (shouldRestartDiscovery()) NfcFieldResetDelayMillis else 0L
 
     private fun savePendingSnapshot(snapshot: Map<Int, ByteArray>) {
         val serialized = snapshot.entries.joinToString(";") { (id, value) ->
