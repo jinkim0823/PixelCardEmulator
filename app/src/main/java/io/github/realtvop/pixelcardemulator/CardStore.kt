@@ -8,6 +8,7 @@ import org.json.JSONObject
 private const val PreferencesName = "office_cards"
 private const val CardsKey = "cards"
 private const val DefaultCardKey = "default_card"
+private const val ActiveCardKey = "active_card"
 
 /** Synchronous persistence for the small card catalog. */
 class CardStore(context: Context) {
@@ -53,6 +54,14 @@ class CardStore(context: Context) {
     fun saveDefaultCardId(id: String?) {
         check(preferences.edit().putString(DefaultCardKey, id).commit()) {
             "Could not save the default card"
+        }
+    }
+
+    fun loadActiveCardId(): String? = preferences.getString(ActiveCardKey, null)
+
+    fun saveActiveCardId(id: String?) {
+        check(preferences.edit().putString(ActiveCardKey, id).commit()) {
+            "Could not save the active card"
         }
     }
 }

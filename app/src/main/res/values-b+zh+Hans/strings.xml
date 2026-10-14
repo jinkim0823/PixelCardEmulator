@@ -68,6 +68,7 @@
     <string name="experimental_raw_message">此设备上不提供官方 UID 模拟接口。备用方案会直接写入 NFC 控制器参数。卡片停用或应用重启时，将恢复已保存的快照，但此固件尚未经过验证。此次同意仅适用于当前固件版本。</string>
     <string name="continue_action">继续</string>
     <string name="more_options">更多选项</string>
+    <string name="automatic_card_picker">读卡时弹出选卡</string>
     <string name="raw_nci_mode">原始 NCI 模式</string>
     <string name="enabled">已启用</string>
     <string name="set_up">设置</string>

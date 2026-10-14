@@ -81,7 +81,9 @@ class CardsViewModel(application: Application) : AndroidViewModel(application) {
         private set
 
     /** Held as a single id so that at most one card can be active. */
-    var activeId by mutableStateOf<String?>(null)
+    var activeId by mutableStateOf(
+        store.loadActiveCardId().takeIf { id -> emulator.hasPendingRestore && cards.any { it.id == id } },
+    )
         private set
 
     /** Independent of [activeId]: the default card does not have to be the active one. */
@@ -109,15 +111,26 @@ class CardsViewModel(application: Application) : AndroidViewModel(application) {
             "android.permission.WRITE_SECURE_SETTINGS"
 
     init {
-        pendingAction = if (emulator.hasPendingRestore) {
+        val shouldRecoverAfterRestart = emulator.hasPendingRestore && !EmulationProcessState.hasLiveSession
+        if (!emulator.hasPendingRestore) store.saveActiveCardId(null)
+        pendingAction = if (shouldRecoverAfterRestart) {
             PendingAction.RestoreAfterRestart
-        } else {
+        } else if (!emulator.hasPendingRestore) {
             defaultId?.let { id -> cards.find { it.id == id } }?.let { PendingAction.Activate(it, null) }
+        } else {
+            null
         }
     }
 
     fun setActive(id: String?) {
         activeId = id
+        store.saveActiveCardId(id)
+        EmulationProcessState.hasLiveSession = id != null
+    }
+
+    fun refreshActiveCard() {
+        if (emulatorUiState.busy) return
+        activeId = store.loadActiveCardId().takeIf { id -> cards.any { it.id == id } }
     }
 
     fun toggleActive(id: String) {

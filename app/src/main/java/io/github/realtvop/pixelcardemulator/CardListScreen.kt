@@ -99,6 +99,9 @@ fun CardListScreen(
     onLanguageSelected: (AppLanguage) -> Unit = {},
     showPermissionBanner: Boolean = false,
     onPermissionBannerClick: () -> Unit = {},
+    automaticPickerEnabled: Boolean = false,
+    onAutomaticPickerClick: () -> Unit = {},
+    managementEnabled: Boolean = true,
 ) {
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     // The card whose swipe menu is open. Held here so that opening one closes any other.
@@ -114,60 +117,82 @@ fun CardListScreen(
                 TopAppBar(
                     title = { Text(stringResource(R.string.cards)) },
                     actions = {
-                        FilledTonalIconButton(
-                            onClick = onAddCard,
-                            shapes = IconButtonDefaults.shapes(),
-                            modifier = Modifier
-                                .padding(end = 8.dp)
-                                .size(
-                                    IconButtonDefaults.smallContainerSize(
-                                        IconButtonDefaults.IconButtonWidthOption.Wide,
+                        if (managementEnabled) {
+                            FilledTonalIconButton(
+                                onClick = onAddCard,
+                                shapes = IconButtonDefaults.shapes(),
+                                modifier = Modifier
+                                    .padding(end = 8.dp)
+                                    .size(
+                                        IconButtonDefaults.smallContainerSize(
+                                            IconButtonDefaults.IconButtonWidthOption.Wide,
+                                        ),
                                     ),
-                                ),
-                        ) {
-                            Icon(Icons.Rounded.Add, contentDescription = stringResource(R.string.add_card))
-                        }
-                        Box {
-                            IconButton(onClick = { appMenuOpen = true }) {
-                                Icon(Icons.Rounded.MoreVert, contentDescription = stringResource(R.string.more_options))
+                            ) {
+                                Icon(Icons.Rounded.Add, contentDescription = stringResource(R.string.add_card))
                             }
-                            DropdownMenu(expanded = appMenuOpen, onDismissRequest = { appMenuOpen = false }) {
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.raw_nci_mode)) },
-                                    onClick = {
-                                        appMenuOpen = false
-                                        onToggleForceRaw()
-                                    },
-                                    trailingIcon = {
-                                        if (forceRaw) {
-                                            Icon(
-                                                Icons.Rounded.Check,
-                                                contentDescription = stringResource(R.string.enabled),
+                            Box {
+                                IconButton(onClick = { appMenuOpen = true }) {
+                                    Icon(Icons.Rounded.MoreVert, contentDescription = stringResource(R.string.more_options))
+                                }
+                                DropdownMenu(expanded = appMenuOpen, onDismissRequest = { appMenuOpen = false }) {
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.automatic_card_picker)) },
+                                        onClick = {
+                                            appMenuOpen = false
+                                            onAutomaticPickerClick()
+                                        },
+                                        trailingIcon = {
+                                            if (automaticPickerEnabled) {
+                                                Icon(
+                                                    Icons.Rounded.Check,
+                                                    contentDescription = stringResource(R.string.enabled),
+                                                )
+                                            } else {
+                                                Text(
+                                                    stringResource(R.string.set_up),
+                                                    style = MaterialTheme.typography.labelLarge,
+                                                )
+                                            }
+                                        },
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.raw_nci_mode)) },
+                                        onClick = {
+                                            appMenuOpen = false
+                                            onToggleForceRaw()
+                                        },
+                                        trailingIcon = {
+                                            if (forceRaw) {
+                                                Icon(
+                                                    Icons.Rounded.Check,
+                                                    contentDescription = stringResource(R.string.enabled),
+                                                )
+                                            }
+                                        },
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.language)) },
+                                        trailingIcon = {
+                                            Text(
+                                                stringResource(language.label),
+                                                style = MaterialTheme.typography.labelLarge,
                                             )
-                                        }
-                                    },
-                                )
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.language)) },
-                                    trailingIcon = {
-                                        Text(
-                                            stringResource(language.label),
-                                            style = MaterialTheme.typography.labelLarge,
-                                        )
-                                    },
-                                    onClick = {
-                                        appMenuOpen = false
-                                        languageDialogOpen = true
-                                    },
-                                )
-                                HorizontalDivider()
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.star_on_github)) },
-                                    onClick = {
-                                        appMenuOpen = false
-                                        uriHandler.openUri(GitHubRepoUrl)
-                                    },
-                                )
+                                        },
+                                        onClick = {
+                                            appMenuOpen = false
+                                            languageDialogOpen = true
+                                        },
+                                    )
+                                    HorizontalDivider()
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.star_on_github)) },
+                                        onClick = {
+                                            appMenuOpen = false
+                                            uriHandler.openUri(GitHubRepoUrl)
+                                        },
+                                    )
+                                }
                             }
                         }
                     },
@@ -214,6 +239,7 @@ fun CardListScreen(
                         onToggleActive = { onToggleActive(card.id) },
                         onToggleDefault = { onToggleDefault(card.id) },
                         onEdit = { onEditCard(card.id) },
+                        swipeActionsEnabled = managementEnabled,
                         modifier = Modifier.animateItem(),
                     )
                 }
@@ -312,6 +338,7 @@ private fun CardRow(
     onToggleActive: () -> Unit,
     onToggleDefault: () -> Unit,
     onEdit: () -> Unit,
+    swipeActionsEnabled: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val haptics = LocalHapticFeedback.current
@@ -327,20 +354,28 @@ private fun CardRow(
             },
         )
     }
-    val swiped by remember(swipe) { derivedStateOf { -swipe.offset >= 1f } }
+    val swiped by remember(swipe, swipeActionsEnabled) {
+        derivedStateOf { swipeActionsEnabled && -swipe.offset >= 1f }
+    }
     // Report where a swipe settles, and close again when told to (another card opened, or a tap).
-    LaunchedEffect(swipe.settledValue) { onSwipeMenuOpenChange(swipe.settledValue == SwipeMenu.Open) }
-    LaunchedEffect(swipeMenuOpen) { if (!swipeMenuOpen) swipe.animateTo(SwipeMenu.Closed) }
+    if (swipeActionsEnabled) {
+        LaunchedEffect(swipe.settledValue) { onSwipeMenuOpenChange(swipe.settledValue == SwipeMenu.Open) }
+        LaunchedEffect(swipeMenuOpen) { if (!swipeMenuOpen) swipe.animateTo(SwipeMenu.Closed) }
+    }
 
     Box(
-        modifier.anchoredDraggable(
-            state = swipe,
-            orientation = Orientation.Horizontal,
-            flingBehavior = AnchoredDraggableDefaults.flingBehavior(
+        if (swipeActionsEnabled) {
+            modifier.anchoredDraggable(
                 state = swipe,
-                animationSpec = MaterialTheme.motionScheme.fastSpatialSpec(),
-            ),
-        ),
+                orientation = Orientation.Horizontal,
+                flingBehavior = AnchoredDraggableDefaults.flingBehavior(
+                    state = swipe,
+                    animationSpec = MaterialTheme.motionScheme.fastSpatialSpec(),
+                ),
+            )
+        } else {
+            modifier
+        },
     ) {
         // Only composed while swiped, so the actions are never reachable underneath a closed card.
         if (swiped) {
@@ -388,7 +423,7 @@ private fun CardRow(
                     onSwipeMenuOpenChange(false)
                 } else {
                     haptics.performHapticFeedback(
-                        if (nowActive) HapticFeedbackType.ToggleOn else HapticFeedbackType.ToggleOff,
+                        if (!swipeActionsEnabled || nowActive) HapticFeedbackType.ToggleOn else HapticFeedbackType.ToggleOff,
                     )
                     onToggleActive()
                 }
@@ -396,7 +431,11 @@ private fun CardRow(
             modifier = Modifier
                 // Swiping squeezes the card from its end edge rather than sliding it out of the row.
                 .layout { measurable, constraints ->
-                    val given = (-swipe.offset).roundToInt().coerceIn(0, constraints.maxWidth)
+                    val given = if (swipeActionsEnabled) {
+                        (-swipe.offset).roundToInt().coerceIn(0, constraints.maxWidth)
+                    } else {
+                        0
+                    }
                     val placeable = measurable.measure(constraints.offset(horizontal = -given))
                     layout(constraints.maxWidth, placeable.height) { placeable.placeRelative(0, 0) }
                 }

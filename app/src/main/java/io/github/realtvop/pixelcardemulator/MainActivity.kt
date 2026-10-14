@@ -6,6 +6,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Bundle
 import android.os.Build
 import android.provider.Settings
@@ -72,6 +73,7 @@ private const val ScrimAlpha = 0.4f
 
 class MainActivity : ComponentActivity() {
     private val viewModel: CardsViewModel by viewModels()
+    private var automaticPickerEnabled by mutableStateOf(false)
     private val wirelessPermissions = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
     ) { result ->
@@ -84,6 +86,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        automaticPickerEnabled = Settings.canDrawOverlays(this)
         enableEdgeToEdge()
         setContent {
             PixelCardTheme {
@@ -154,6 +157,8 @@ class MainActivity : ComponentActivity() {
                         onLanguageSelected = viewModel::setLanguage,
                         showPermissionBanner = !viewModel.secureSettingsGranted && !viewModel.forceRaw,
                         onPermissionBannerClick = viewModel::showPermissionPrompt,
+                        automaticPickerEnabled = automaticPickerEnabled,
+                        onAutomaticPickerClick = ::openAutomaticPickerSettings,
                     )
                 }
 
@@ -273,13 +278,34 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        automaticPickerEnabled = Settings.canDrawOverlays(this)
         viewModel.attachActivity(this)
         viewModel.refreshPermission()
+        viewModel.refreshActiveCard()
     }
 
     override fun onPause() {
         viewModel.detachActivity(this)
         super.onPause()
+    }
+
+    override fun onStart() {
+        super.onStart()
+        AppVisibility.activityStarted()
+    }
+
+    override fun onStop() {
+        AppVisibility.activityStopped()
+        super.onStop()
+    }
+
+    private fun openAutomaticPickerSettings() {
+        startActivity(
+            Intent(
+                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                Uri.parse("package:$packageName"),
+            ),
+        )
     }
 
     private fun requestWirelessDebuggingSetup() {

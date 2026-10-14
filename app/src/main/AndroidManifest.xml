@@ -3,6 +3,8 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.NFC" />
+    <uses-permission android:name="android.permission.NFC_TRANSACTION_EVENT" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission
         android:name="android.permission.WRITE_SECURE_SETTINGS"
         tools:ignore="ProtectedPermissions" />
@@ -44,6 +46,24 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity
+            android:name=".CardPickerActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:launchMode="singleTop"
+            android:noHistory="true"
+            android:showWhenLocked="true"
+            android:taskAffinity="io.github.realtvop.pixelcardemulator.card_picker"
+            android:turnScreenOn="true" />
+        <receiver
+            android:name=".NfcFieldReceiver"
+            android:exported="true"
+            tools:ignore="ExportedReceiver">
+            <intent-filter>
+                <action android:name="com.android.nfc_extras.action.RF_FIELD_ON_DETECTED" />
+                <action android:name="com.android.nfc_extras.action.RF_FIELD_OFF_DETECTED" />
+            </intent-filter>
+        </receiver>
         <service
             android:name=".WirelessDebuggingService"
             android:exported="false"
