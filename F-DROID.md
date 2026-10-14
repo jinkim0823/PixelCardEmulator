@@ -6,7 +6,7 @@ The app-owned Fastlane metadata is already included under `fastlane/metadata/and
 - versionCode `1` changelog
 - two Android Emulator screenshots
 
-The F-Droid build metadata belongs in the separate `fdroiddata` repository. Copy the following draft to `metadata/io.github.realtvop.pixelcardemulator.yml` and replace `<FULL_COMMIT_HASH>` with the full hash of the tagged source commit:
+The F-Droid build metadata belongs in the separate `fdroiddata` repository. Copy the following draft to `metadata/io.github.realtvop.pixelcardemulator.yml`:
 
 ```yaml
 Categories:
@@ -24,7 +24,7 @@ Repo: https://github.com/realtvop/PixelCardEmulator.git
 Builds:
   - versionName: '0.1'
     versionCode: 1
-    commit: <FULL_COMMIT_HASH>
+    commit: 426134715748135a2a0c51f9a89f21906304e094
     subdir: app
     gradle:
       - yes
