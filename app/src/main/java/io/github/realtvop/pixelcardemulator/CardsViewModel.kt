@@ -140,6 +140,15 @@ class CardsViewModel(application: Application) : AndroidViewModel(application) {
         emulator.forceRaw = forceRaw
     }
 
+    /** Read from the system each time, so a language picked in system settings shows here too. */
+    val language: AppLanguage
+        get() = getApplication<Application>().currentAppLanguage()
+
+    /** Android recreates the activity in the new language, so nothing else needs updating here. */
+    fun setLanguage(language: AppLanguage) {
+        getApplication<Application>().setAppLanguage(language)
+    }
+
     fun add(name: String, uid: String) {
         cards = cards + SavedCard(name, uid)
         store.saveCards(cards)

@@ -73,6 +73,11 @@
     <string name="raw_nci_mode">Raw NCI mode</string>
     <string name="enabled">Enabled</string>
     <string name="set_up">Set up</string>
+    <string name="language">Language</string>
+    <string name="language_system_default">System default</string>
+    <string name="language_english" translatable="false">English</string>
+    <string name="language_simplified_chinese" translatable="false">简体中文</string>
+    <string name="star_on_github">Star on GitHub</string>
 
     <!-- Emulation status and errors shown in the list and in dialogs -->
     <string name="status_activating">Activating %1$s…</string>

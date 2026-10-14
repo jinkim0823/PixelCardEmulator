@@ -150,6 +150,8 @@ class MainActivity : ComponentActivity() {
                         onEditCard = { openEditor(it) },
                         forceRaw = viewModel.forceRaw,
                         onToggleForceRaw = viewModel::toggleForceRaw,
+                        language = viewModel.language,
+                        onLanguageSelected = viewModel::setLanguage,
                         showPermissionBanner = !viewModel.secureSettingsGranted && !viewModel.forceRaw,
                         onPermissionBannerClick = viewModel::showPermissionPrompt,
                     )

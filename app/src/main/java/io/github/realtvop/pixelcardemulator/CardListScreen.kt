@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.plus
@@ -26,6 +27,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
@@ -33,16 +36,19 @@ import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FilledTonalIconToggleButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -64,14 +70,19 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.offset
 import kotlin.math.roundToInt
+
+/** Opened from the overflow menu so that people can star the project. */
+private const val GitHubRepoUrl = "https://github.com/realtvop/PixelCardEmulator"
 
 @Composable
 fun CardListScreen(
@@ -84,6 +95,8 @@ fun CardListScreen(
     onEditCard: (String) -> Unit,
     forceRaw: Boolean = false,
     onToggleForceRaw: () -> Unit = {},
+    language: AppLanguage = AppLanguage.SystemDefault,
+    onLanguageSelected: (AppLanguage) -> Unit = {},
     showPermissionBanner: Boolean = false,
     onPermissionBannerClick: () -> Unit = {},
 ) {
@@ -91,6 +104,8 @@ fun CardListScreen(
     // The card whose swipe menu is open. Held here so that opening one closes any other.
     var swipedCardId by remember { mutableStateOf<String?>(null) }
     var appMenuOpen by remember { mutableStateOf(false) }
+    var languageDialogOpen by remember { mutableStateOf(false) }
+    val uriHandler = LocalUriHandler.current
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -130,6 +145,27 @@ fun CardListScreen(
                                                 contentDescription = stringResource(R.string.enabled),
                                             )
                                         }
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.language)) },
+                                    trailingIcon = {
+                                        Text(
+                                            stringResource(language.label),
+                                            style = MaterialTheme.typography.labelLarge,
+                                        )
+                                    },
+                                    onClick = {
+                                        appMenuOpen = false
+                                        languageDialogOpen = true
+                                    },
+                                )
+                                HorizontalDivider()
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.star_on_github)) },
+                                    onClick = {
+                                        appMenuOpen = false
+                                        uriHandler.openUri(GitHubRepoUrl)
                                     },
                                 )
                             }
@@ -184,6 +220,17 @@ fun CardListScreen(
             }
         }
     }
+
+    if (languageDialogOpen) {
+        LanguageDialog(
+            selected = language,
+            onSelect = {
+                languageDialogOpen = false
+                onLanguageSelected(it)
+            },
+            onDismiss = { languageDialogOpen = false },
+        )
+    }
 }
 
 @Composable
@@ -206,6 +253,41 @@ private fun PermissionBanner(onClick: () -> Unit) {
     ) {
         Text(stringResource(R.string.permission_required))
     }
+}
+
+/** Choosing a language applies it straight away, which is why there is no confirm button. */
+@Composable
+private fun LanguageDialog(
+    selected: AppLanguage,
+    onSelect: (AppLanguage) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.language)) },
+        text = {
+            Column(Modifier.selectableGroup()) {
+                AppLanguage.entries.forEach { option ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 56.dp)
+                            .selectable(
+                                selected = option == selected,
+                                onClick = { onSelect(option) },
+                                role = Role.RadioButton,
+                            ),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(selected = option == selected, onClick = null)
+                        Text(stringResource(option.label), modifier = Modifier.padding(start = 8.dp))
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
+    )
 }
 
 private enum class SwipeMenu { Closed, Open }
@@ -394,6 +476,8 @@ private fun CardListScreenPreview() {
             onEditCard = {},
             forceRaw = false,
             onToggleForceRaw = {},
+            language = AppLanguage.SystemDefault,
+            onLanguageSelected = {},
             showPermissionBanner = true,
             onPermissionBannerClick = {},
         )
@@ -414,6 +498,8 @@ private fun EmptyCardListScreenPreview() {
             onEditCard = {},
             forceRaw = false,
             onToggleForceRaw = {},
+            language = AppLanguage.SystemDefault,
+            onLanguageSelected = {},
             showPermissionBanner = false,
             onPermissionBannerClick = {},
         )

@@ -71,6 +71,9 @@
     <string name="raw_nci_mode">原始 NCI 模式</string>
     <string name="enabled">已启用</string>
     <string name="set_up">设置</string>
+    <string name="language">语言</string>
+    <string name="language_system_default">跟随系统</string>
+    <string name="star_on_github">在 GitHub 上点个 Star</string>
 
     <!-- Emulation status and errors shown in the list and in dialogs -->
     <string name="status_activating">正在激活 %1$s…</string>
