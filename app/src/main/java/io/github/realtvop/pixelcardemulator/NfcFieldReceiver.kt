@@ -41,8 +41,7 @@ class NfcFieldReceiver : BroadcastReceiver() {
 
         val store = CardStore(context)
         val cards = store.loadCards()
-        val activeId = store.loadActiveCardId()
-        if (cards.size < 2 || activeId == null || cards.none { it.id == activeId }) return
+        if (cards.isEmpty()) return
 
         // A visible activity can start the picker directly. Background and lock-screen launches use
         // the user-granted overlay capability; no overlay window itself is created.
