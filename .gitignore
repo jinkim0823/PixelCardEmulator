@@ -8,6 +8,10 @@ gradle/gradle-daemon-jvm.properties
 
 # Local configuration (SDK path)
 local.properties
+keystore.properties
+*.jks
+*.keystore
+*.p12
 
 # Android Studio
 *.iml

@@ -20,6 +20,14 @@ English | [简体中文](README.zh-CN.md)
 - **Card Management**: Read cards via NFC, enter hex UIDs manually, set default card, and mask UIDs for privacy.
 - **Material 3 Expressive UI**: Dynamic Color, smooth transitions, swipe actions, and haptics.
 
+## Screenshots
+
+These demo screenshots were captured from the Android Emulator. The editor uses the non-sensitive example UID `04 A1 B2 C3`.
+
+![Card list](fastlane/metadata/android/en-US/images/phoneScreenshots/1.png)
+
+![Add card and UID editor](fastlane/metadata/android/en-US/images/phoneScreenshots/2.png)
+
 ## Requirements
 
 - **Device**: Google Pixel running **Android 15+** (or compatible Samsung / OnePlus / Sony devices via Raw NCI).
@@ -50,6 +58,28 @@ English | [简体中文](README.zh-CN.md)
 ```bash
 ./gradlew assembleDebug
 ```
+
+## F-Droid preparation
+
+F-Droid listing text, changelog, and emulator screenshots are stored in [`fastlane/metadata/android/`](fastlane/metadata/android/). See [`F-DROID.md`](F-DROID.md) for the submission checklist and fdroiddata metadata draft.
+
+### Signed release builds
+
+Create a local keystore and Gradle signing properties when preparing the first release:
+
+```bash
+./scripts/prepare-signing.sh
+./gradlew assembleRelease
+```
+
+Keep `release-keystore.jks` and `keystore.properties` private. For the release workflow, add these repository Actions secrets:
+
+- `ANDROID_KEYSTORE_BASE64`: base64-encoded `release-keystore.jks`
+- `ANDROID_KEYSTORE_PASSWORD`
+- `ANDROID_KEY_ALIAS`
+- `ANDROID_KEY_PASSWORD`
+
+Push a tag such as `v0.1.0` to build the signed APK and create a draft GitHub release with the APK attached. Every pushed commit also produces an unsigned debug APK in the **Development Build** workflow's Actions artifact; it is not published as a release.
 
 ## License
 

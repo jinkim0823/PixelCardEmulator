@@ -1,6 +1,37 @@
+import java.io.File
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+}
+
+val signingProperties = Properties()
+val signingPropertiesFile = rootProject.file("keystore.properties")
+if (signingPropertiesFile.isFile) {
+    FileInputStream(signingPropertiesFile).use(signingProperties::load)
+}
+
+fun signingValue(environmentName: String, propertyName: String): String? =
+    System.getenv(environmentName)?.takeIf(String::isNotBlank)
+        ?: signingProperties.getProperty(propertyName)?.takeIf(String::isNotBlank)
+
+val releaseStoreFilePath = signingValue("ANDROID_KEYSTORE_PATH", "storeFile")
+val releaseStorePassword = signingValue("ANDROID_KEYSTORE_PASSWORD", "storePassword")
+val releaseKeyAlias = signingValue("ANDROID_KEY_ALIAS", "keyAlias")
+val releaseKeyPassword = signingValue("ANDROID_KEY_PASSWORD", "keyPassword")
+val releaseSigningConfigured = listOf(
+    releaseStoreFilePath,
+    releaseStorePassword,
+    releaseKeyAlias,
+    releaseKeyPassword,
+).all { it != null }
+val releaseTaskRequested = gradle.startParameter.taskNames.any {
+    it.substringAfterLast(":").contains("release", ignoreCase = true)
+}
+if (releaseTaskRequested && !releaseSigningConfigured) {
+    error("Release signing is not configured. Create keystore.properties or set the ANDROID_KEYSTORE_* environment variables.")
 }
 
 android {
@@ -14,6 +45,30 @@ android {
         targetSdk = 37
         versionCode = 1
         versionName = "0.1"
+    }
+
+    if (releaseSigningConfigured) {
+        signingConfigs {
+            create("release") {
+                val storeFilePath = requireNotNull(releaseStoreFilePath)
+                storeFile = if (File(storeFilePath).isAbsolute) {
+                    file(storeFilePath)
+                } else {
+                    rootProject.file(storeFilePath)
+                }
+                storePassword = requireNotNull(releaseStorePassword)
+                keyAlias = requireNotNull(releaseKeyAlias)
+                keyPassword = requireNotNull(releaseKeyPassword)
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            if (releaseSigningConfigured) {
+                signingConfig = signingConfigs.getByName("release")
+            }
+        }
     }
 
     buildFeatures {

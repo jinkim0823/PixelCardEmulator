@@ -20,6 +20,14 @@
 - **卡片管理**：通过 NFC 读取卡片、手动输入十六进制 UID、设置默认卡片，并可隐藏 UID 以保护隐私。
 - **Material 3 Expressive 界面**：动态取色、流畅的过渡动画、滑动操作和触感反馈。
 
+## 演示截图
+
+以下截图来自 Android 模拟器；编辑页使用的是不关联真实卡片的示例 UID：`04 A1 B2 C3`。
+
+![卡片列表](fastlane/metadata/android/zh-CN/images/phoneScreenshots/1.png)
+
+![新增卡片和 UID 编辑](fastlane/metadata/android/zh-CN/images/phoneScreenshots/2.png)
+
 ## 系统要求
 
 - **设备**：运行 **Android 15+** 的 Google Pixel（或通过原始 NCI 支持的三星、一加、索尼等兼容设备）。
@@ -50,6 +58,28 @@
 ```bash
 ./gradlew assembleDebug
 ```
+
+## F-Droid 准备
+
+F-Droid 的商店文案、更新日志和模拟器截图已放在 [`fastlane/metadata/android/`](fastlane/metadata/android/)。提审清单和 fdroiddata 元数据草稿见 [`F-DROID.md`](F-DROID.md)。
+
+### 签名发布构建
+
+准备首次发布时，先生成本地签名文件并验证 release 构建：
+
+```bash
+./scripts/prepare-signing.sh
+./gradlew assembleRelease
+```
+
+请妥善保管 `release-keystore.jks` 和 `keystore.properties`，不要提交到仓库。为发布 workflow 配置以下仓库 Actions Secrets：
+
+- `ANDROID_KEYSTORE_BASE64`：`release-keystore.jks` 的 base64 内容
+- `ANDROID_KEYSTORE_PASSWORD`
+- `ANDROID_KEY_ALIAS`
+- `ANDROID_KEY_PASSWORD`
+
+推送例如 `v0.1.0` 的 tag 后，workflow 会构建带签名 APK，并创建附带 APK 的 GitHub Draft Release。每次 push commit 也会触发 **Development Build**，生成未签名 debug APK 作为 Actions artifact，但不会发布 Release。
 
 ## 许可证
 
