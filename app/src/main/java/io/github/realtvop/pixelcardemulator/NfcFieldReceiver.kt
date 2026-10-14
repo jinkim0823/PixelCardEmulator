@@ -43,9 +43,9 @@ class NfcFieldReceiver : BroadcastReceiver() {
         val cards = store.loadCards()
         if (cards.isEmpty()) return
 
-        // A visible activity can start the picker directly. Background and lock-screen launches use
-        // the user-granted overlay capability; no overlay window itself is created.
-        if (!AppVisibility.hasVisibleActivity && !Settings.canDrawOverlays(context)) return
+        // The full app already exposes card selection. Only open the restricted picker when the app
+        // is in the background; lock-screen/background launches use the user-granted overlay capability.
+        if (AppVisibility.hasVisibleActivity || !Settings.canDrawOverlays(context)) return
 
         val now = SystemClock.elapsedRealtime()
         val preferences = context.getSharedPreferences(PickerStatePreferences, Context.MODE_PRIVATE)
