@@ -24,9 +24,20 @@ English | [简体中文](README.zh-CN.md)
 
 These demo screenshots were captured from the Android Emulator. The editor uses the non-sensitive example UID `04 A1 B2 C3`.
 
-![Card list](fastlane/metadata/android/en-US/images/phoneScreenshots/1.png)
-
-![Add card and UID editor](fastlane/metadata/android/en-US/images/phoneScreenshots/2.png)
+<table>
+  <tr>
+    <td align="center">
+      <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1.png" alt="Card list" width="240">
+      <br>
+      <sub>Card list with the saved demo card</sub>
+    </td>
+    <td align="center">
+      <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2.png" alt="Add card and UID editor" width="240">
+      <br>
+      <sub>Add a card and edit its example UID</sub>
+    </td>
+  </tr>
+</table>
 
 ## Requirements
 
@@ -61,7 +72,7 @@ These demo screenshots were captured from the Android Emulator. The editor uses 
 
 ## F-Droid preparation
 
-F-Droid listing text, changelog, and emulator screenshots are stored in [`fastlane/metadata/android/`](fastlane/metadata/android/). See [`F-DROID.md`](F-DROID.md) for the submission checklist and fdroiddata metadata draft.
+F-Droid listing text, changelog, and emulator screenshots are stored in [`fastlane/metadata/android/`](fastlane/metadata/android/). The [F-Droid build workflow](.github/workflows/fdroid.yml) validates the source build with the F-Droid buildserver container.
 
 ### Signed release builds
 

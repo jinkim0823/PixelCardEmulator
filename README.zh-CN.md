@@ -24,9 +24,20 @@
 
 以下截图来自 Android 模拟器；编辑页使用的是不关联真实卡片的示例 UID：`04 A1 B2 C3`。
 
-![卡片列表](fastlane/metadata/android/zh-CN/images/phoneScreenshots/1.png)
-
-![新增卡片和 UID 编辑](fastlane/metadata/android/zh-CN/images/phoneScreenshots/2.png)
+<table>
+  <tr>
+    <td align="center">
+      <img src="fastlane/metadata/android/zh-CN/images/phoneScreenshots/1.png" alt="卡片列表" width="240">
+      <br>
+      <sub>已保存示例卡片的列表</sub>
+    </td>
+    <td align="center">
+      <img src="fastlane/metadata/android/zh-CN/images/phoneScreenshots/2.png" alt="新增卡片和 UID 编辑" width="240">
+      <br>
+      <sub>新增卡片并编辑示例 UID</sub>
+    </td>
+  </tr>
+</table>
 
 ## 系统要求
 
@@ -61,7 +72,7 @@
 
 ## F-Droid 准备
 
-F-Droid 的商店文案、更新日志和模拟器截图已放在 [`fastlane/metadata/android/`](fastlane/metadata/android/)。提审清单和 fdroiddata 元数据草稿见 [`F-DROID.md`](F-DROID.md)。
+F-Droid 的商店文案、更新日志和模拟器截图已放在 [`fastlane/metadata/android/`](fastlane/metadata/android/)。[F-Droid 构建 workflow](.github/workflows/fdroid.yml) 会使用 F-Droid buildserver 容器验证源码构建。
 
 ### 签名发布构建
 
