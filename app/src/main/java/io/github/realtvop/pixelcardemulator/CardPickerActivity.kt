@@ -1,6 +1,7 @@
 package io.github.realtvop.pixelcardemulator
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.os.Handler
@@ -24,18 +25,19 @@ class CardPickerActivity : ComponentActivity() {
     private val emulator by lazy { NfcEmulationCoordinator(this) }
     private val executor = Executors.newSingleThreadExecutor()
     private val mainHandler = Handler(Looper.getMainLooper())
+    private var cards by mutableStateOf(emptyList<SavedCard>())
+    private var defaultId by mutableStateOf<String?>(null)
+    private var activeId by mutableStateOf<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        refreshCards()
         setShowWhenLocked(true)
         setTurnScreenOn(true)
         enableEdgeToEdge()
 
         setContent {
             PixelCardTheme {
-                val cards = remember { store.loadCards() }
-                val defaultId = remember { store.loadDefaultCardId() }
-                var activeId by remember { mutableStateOf(store.loadActiveCardId()) }
                 var busyCardId by remember { mutableStateOf<String?>(null) }
                 var error by remember { mutableStateOf<String?>(null) }
 
@@ -97,7 +99,14 @@ class CardPickerActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        refreshCards()
         emulator.setActivity(this)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        refreshCards()
     }
 
     override fun onPause() {
@@ -108,6 +117,14 @@ class CardPickerActivity : ComponentActivity() {
     override fun onDestroy() {
         executor.shutdownNow()
         super.onDestroy()
+    }
+
+    /** The picker can be reused without being recreated, so do not keep a stale catalog snapshot. */
+    private fun refreshCards() {
+        val latestCards = store.loadCards()
+        cards = latestCards
+        defaultId = store.loadDefaultCardId().takeIf { id -> latestCards.any { it.id == id } }
+        activeId = store.loadActiveCardId().takeIf { id -> latestCards.any { it.id == id } }
     }
 
     private fun switchCard(selected: SavedCard, previous: SavedCard?): Throwable? {
