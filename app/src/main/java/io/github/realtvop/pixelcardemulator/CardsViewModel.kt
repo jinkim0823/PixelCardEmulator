@@ -111,21 +111,19 @@ class CardsViewModel(application: Application) : AndroidViewModel(application) {
             "android.permission.WRITE_SECURE_SETTINGS"
 
     init {
-        val shouldRecoverAfterRestart = emulator.hasPendingRestore && !EmulationProcessState.hasLiveSession
-        if (!emulator.hasPendingRestore) store.saveActiveCardId(null)
-        pendingAction = if (shouldRecoverAfterRestart) {
-            PendingAction.RestoreAfterRestart
-        } else if (!emulator.hasPendingRestore) {
-            defaultId?.let { id -> cards.find { it.id == id } }?.let { PendingAction.Activate(it, null) }
+        val hasPendingEmulation = emulator.hasPendingRestore
+        if (hasPendingEmulation) {
+            if (activeId == null) pendingAction = PendingAction.RestoreAfterRestart
         } else {
-            null
+            store.saveActiveCardId(null)
+            pendingAction = defaultId?.let { id -> cards.find { it.id == id } }
+                ?.let { PendingAction.Activate(it, null) }
         }
     }
 
     fun setActive(id: String?) {
         activeId = id
         store.saveActiveCardId(id)
-        EmulationProcessState.hasLiveSession = id != null
     }
 
     fun refreshActiveCard() {

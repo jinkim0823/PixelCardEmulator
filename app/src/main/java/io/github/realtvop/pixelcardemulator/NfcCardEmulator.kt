@@ -20,12 +20,6 @@ internal interface NfcCardEmulationBackend {
     fun deactivate()
 }
 
-/** Distinguishes a live process that owns the active controller state from a process restart. */
-internal object EmulationProcessState {
-    @Volatile
-    var hasLiveSession = false
-}
-
 /** Android 15+'s system-service implementation of NFC-A identity emulation. */
 private class OemNfcCardEmulator(private val context: Context) : NfcCardEmulationBackend {
     private val adapter: NfcAdapter? = context.getSystemService(NfcManager::class.java)?.defaultAdapter

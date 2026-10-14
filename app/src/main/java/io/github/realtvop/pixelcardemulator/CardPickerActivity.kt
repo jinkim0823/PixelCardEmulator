@@ -27,9 +27,6 @@ class CardPickerActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if (emulator.hasPendingRestore && store.loadActiveCardId() != null) {
-            EmulationProcessState.hasLiveSession = true
-        }
         setShowWhenLocked(true)
         setTurnScreenOn(true)
         enableEdgeToEdge()
@@ -130,18 +127,15 @@ class CardPickerActivity : ComponentActivity() {
         return try {
             emulator.activate(selected.uid.hexToBytes())
             store.saveActiveCardId(selected.id)
-            EmulationProcessState.hasLiveSession = true
             null
         } catch (activationError: Throwable) {
             val rollbackError = runCatching {
                 if (previous != null) {
                     emulator.activate(previous.uid.hexToBytes())
                     store.saveActiveCardId(previous.id)
-                    EmulationProcessState.hasLiveSession = true
                 } else {
                     emulator.deactivate()
                     store.saveActiveCardId(null)
-                    EmulationProcessState.hasLiveSession = false
                 }
             }.exceptionOrNull()
             rollbackError?.let(activationError::addSuppressed)
