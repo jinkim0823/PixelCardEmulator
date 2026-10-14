@@ -49,7 +49,6 @@ class CardPickerActivity : ComponentActivity() {
                     onToggleActive = select@{ id ->
                         if (busyCardName != null) return@select
                         if (id == activeId) {
-                            finishAndRemoveTask()
                             return@select
                         }
                         val selected = cards.find { it.id == id } ?: return@select
@@ -62,7 +61,6 @@ class CardPickerActivity : ComponentActivity() {
                                 if (failure == null) {
                                     activeId = selected.id
                                     NfcFieldReceiver.markSelectionCompleted(this@CardPickerActivity)
-                                    finishAndRemoveTask()
                                 } else {
                                     error = failure.message ?: getString(R.string.nfc_operation_failed)
                                 }
