@@ -65,6 +65,7 @@ jobs:
               . /etc/profile
               export fdroidserver=/opt/fdroidserver
               export PYTHONPATH="$fdroidserver"
+              export PATH="$fdroidserver:$PATH"
               export JAVA_HOME="$(java -XshowSettings:properties -version 2>&1 > /dev/null | sed -n "s/^.*java.home = //p" | tr -d " ")"
               cd /build
               python3 -m fdroidserver readmeta
