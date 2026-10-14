@@ -79,7 +79,7 @@ F-Droid 的商店文案、更新日志和模拟器截图已放在 [`fastlane/met
 - `ANDROID_KEY_ALIAS`
 - `ANDROID_KEY_PASSWORD`
 
-推送例如 `v0.1.0` 的 tag 后，workflow 会构建带签名 APK，并创建附带 APK 的 GitHub Draft Release。每次 push commit 也会触发 **Development Build**，生成未签名 debug APK 作为 Actions artifact，但不会发布 Release。
+推送例如 `v0.1` 的 tag 后，workflow 会构建带签名 APK，并创建附带 APK 的 GitHub Draft Release。每次 push commit 也会触发 **Development Build**，生成未签名 debug APK 作为 Actions artifact，但不会发布 Release。
 
 ## 许可证
 

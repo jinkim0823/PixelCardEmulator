@@ -1,0 +1,1 @@
+Initial release with NFC-A UID card management, Android 15+ OEM extension support, Raw NCI fallback, and Shizuku or wireless debugging permission setup.

@@ -1,0 +1,3 @@
+PixelCardEmulator 是面向受支持 Android 设备的开源 NFC-A（ISO 14443-A）UID 模拟器，支持管理 4、7 和 10 字节 UID，并可通过 Shizuku、本机无线调试或电脑 ADB 一次性设置所需权限。
+
+本应用只模拟 NFCID1/UID 字节，不模拟卡片扇区、加密凭据或支付卡。请仅将它用于自己拥有或已获授权测试的卡片和系统。

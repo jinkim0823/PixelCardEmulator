@@ -1,0 +1,1 @@
+在受支持的 Android 设备上模拟 NFC-A UID

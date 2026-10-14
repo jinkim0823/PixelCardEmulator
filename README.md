@@ -79,7 +79,7 @@ Keep `release-keystore.jks` and `keystore.properties` private. For the release w
 - `ANDROID_KEY_ALIAS`
 - `ANDROID_KEY_PASSWORD`
 
-Push a tag such as `v0.1.0` to build the signed APK and create a draft GitHub release with the APK attached. Every pushed commit also produces an unsigned debug APK in the **Development Build** workflow's Actions artifact; it is not published as a release.
+Push a tag such as `v0.1` to build the signed APK and create a draft GitHub release with the APK attached. Every pushed commit also produces an unsigned debug APK in the **Development Build** workflow's Actions artifact; it is not published as a release.
 
 ## License
 

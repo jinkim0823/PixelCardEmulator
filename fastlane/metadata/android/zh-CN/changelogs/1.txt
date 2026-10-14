@@ -1,0 +1,1 @@
+首个版本：支持 NFC-A UID 卡片管理、Android 15+ 厂商扩展、Raw NCI 备用方案，以及通过 Shizuku 或无线调试设置权限。

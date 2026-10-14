@@ -1,0 +1,3 @@
+PixelCardEmulator is an open-source NFC-A (ISO 14443-A) UID emulator for supported Android devices. It manages 4-, 7-, and 10-byte UIDs and provides one-time permission setup through Shizuku, on-device wireless debugging, or computer ADB.
+
+The app emulates only NFCID1/UID bytes. It does not emulate card sectors, encrypted credentials, or payment cards. Use it only with cards and systems you own or are authorized to test.
