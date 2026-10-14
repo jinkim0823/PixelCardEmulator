@@ -63,13 +63,12 @@ jobs:
             -lc '
               set -eux
               . /etc/profile
-              export PATH="$fdroidserver:$PATH"
               export PYTHONPATH="$fdroidserver"
               export JAVA_HOME="$(java -XshowSettings:properties -version 2>&1 > /dev/null | sed -n "s/^.*java.home = //p" | tr -d " ")"
               cd /build
-              fdroid readmeta
-              fdroid lint "$FDROID_APP_ID"
-              fdroid build --test --verbose "$FDROID_APP_ID:$FDROID_VERSION_CODE"
+              python3 -m fdroidserver readmeta
+              python3 -m fdroidserver lint "$FDROID_APP_ID"
+              python3 -m fdroidserver build --test --verbose "$FDROID_APP_ID:$FDROID_VERSION_CODE"
             '
 
       - name: Upload F-Droid build artifacts
