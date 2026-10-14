@@ -6,6 +6,13 @@ The app-owned Fastlane metadata is already included under `fastlane/metadata/and
 - versionCode `1` changelog
 - two Android Emulator screenshots
 
+The repository also contains `.github/fdroid/metadata.yml.in`, which is used by
+`.github/workflows/fdroid.yml` to build the current source revision with the
+official F-Droid buildserver container. The workflow uploads the F-Droid-style
+unsigned APK, source archive, and build logs as Actions artifacts. This is a
+metadata/build validation artifact; it is not signed with the app release key
+and is not the APK published by F-Droid.
+
 The F-Droid build metadata belongs in the separate `fdroiddata` repository. Copy the following draft to `metadata/io.github.realtvop.pixelcardemulator.yml`:
 
 ```yaml

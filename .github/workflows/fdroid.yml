@@ -1,0 +1,84 @@
+name: F-Droid Build
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+env:
+  FDROID_APP_ID: io.github.realtvop.pixelcardemulator
+
+jobs:
+  build:
+    name: Build F-Droid APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Fetch F-Droid build tools and metadata repository
+        run: |
+          set -eux
+          git clone --depth=1 https://gitlab.com/fdroid/fdroidserver.git "$RUNNER_TEMP/fdroidserver"
+          git clone --depth=1 https://gitlab.com/fdroid/fdroiddata.git "$RUNNER_TEMP/fdroiddata"
+          cp "$RUNNER_TEMP/fdroidserver/examples/config.yml" "$RUNNER_TEMP/fdroiddata/config.yml"
+          chmod 600 "$RUNNER_TEMP/fdroiddata/config.yml"
+
+      - name: Prepare F-Droid metadata for this source revision
+        run: |
+          set -eux
+          version_name="$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' app/build.gradle.kts | head -n 1)"
+          version_code="$(sed -n 's/.*versionCode = \([0-9][0-9]*\).*/\1/p' app/build.gradle.kts | head -n 1)"
+          test -n "$version_name"
+          test -n "$version_code"
+
+          sed \
+            -e "s/__VERSION_NAME__/$version_name/g" \
+            -e "s/__VERSION_CODE__/$version_code/g" \
+            -e "s/__COMMIT__/$GITHUB_SHA/g" \
+            .github/fdroid/metadata.yml.in \
+            > "$RUNNER_TEMP/fdroiddata/metadata/$FDROID_APP_ID.yml"
+
+      - name: Build with F-Droid buildserver container
+        env:
+          FDROID_DATA: ${{ runner.temp }}/fdroiddata
+          FDROID_SERVER: ${{ runner.temp }}/fdroidserver
+        run: |
+          set -eux
+          mkdir -p "$FDROID_DATA/.home"
+          docker run --rm \
+            --user "$(id -u):$(id -g)" \
+            --env HOME=/build/.home \
+            --entrypoint /bin/bash \
+            --volume "$FDROID_DATA:/build" \
+            --volume "$FDROID_SERVER:/home/vagrant/fdroidserver:ro" \
+            --env FDROID_APP_ID="$FDROID_APP_ID" \
+            --env FDROID_VERSION_CODE="$(sed -n 's/.*versionCode = \([0-9][0-9]*\).*/\1/p' app/build.gradle.kts | head -n 1)" \
+            registry.gitlab.com/fdroid/fdroidserver:buildserver \
+            -lc '
+              set -eux
+              . /etc/profile
+              export PATH="$fdroidserver:$PATH"
+              export PYTHONPATH="$fdroidserver"
+              export JAVA_HOME="$(java -XshowSettings:properties -version 2>&1 > /dev/null | sed -n "s/^.*java.home = //p" | tr -d " ")"
+              cd /build
+              fdroid readmeta
+              fdroid lint "$FDROID_APP_ID"
+              fdroid build --test --verbose "$FDROID_APP_ID:$FDROID_VERSION_CODE"
+            '
+
+      - name: Upload F-Droid build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: pixelcardemulator-fdroid-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/fdroiddata/tmp/**/*.apk
+            ${{ runner.temp }}/fdroiddata/tmp/**/*.tar.gz
+            ${{ runner.temp }}/fdroiddata/logs/**/*
+          if-no-files-found: error
+          retention-days: 14
