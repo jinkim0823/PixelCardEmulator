@@ -9,18 +9,25 @@ import android.content.pm.PackageManager
 import android.os.Bundle
 import android.os.Build
 import android.provider.Settings
+import androidx.activity.BackEventCompat
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.BackHandler
+import androidx.activity.compose.PredictiveBackHandler
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.animate
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilledTonalButton
@@ -33,18 +40,35 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /** Editor target for a card that does not exist yet. Never collides with an id, which is a UUID. */
 private const val NewCard = "new"
+
+/** Corner radius the editor reaches at the end of a back swipe, where it has become a card. */
+private val SwipeCornerRadius = 32.dp
+
+/** How dark the list gets behind the editor at the end of a back swipe. */
+private const val ScrimAlpha = 0.4f
 
 class MainActivity : ComponentActivity() {
     private val viewModel: CardsViewModel by viewModels()
@@ -66,49 +90,133 @@ class MainActivity : ComponentActivity() {
                 // Two screens only, so one value stands in for a navigation library: null shows the
                 // list, anything else opens the editor on the card with that id, or on a new card.
                 var editorTarget by rememberSaveable { mutableStateOf<String?>(null) }
-                BackHandler(enabled = editorTarget != null) { editorTarget = null }
+                // A back swipe moves the editor by hand, over the list. Progress runs from 0 at rest to 1 at the
+                // full swipe. Dismiss runs from 0 to 1 once a swipe is committed and carries the editor off the edge.
+                var swipeProgress by remember { mutableFloatStateOf(0f) }
+                var swipeDismiss by remember { mutableFloatStateOf(0f) }
+                var swipeEdge by remember { mutableIntStateOf(BackEventCompat.EDGE_LEFT) }
+                // The list is drawn beneath the editor only while a swipe is underway.
+                var swiping by remember { mutableStateOf(false) }
+                // A committed swipe has already carried the editor away, so the list needs no transition of its own.
+                var swipeCommitted by remember { mutableStateOf(false) }
 
                 val slide = MaterialTheme.motionScheme.defaultEffectsSpec<IntOffset>()
                 val fade = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
-                AnimatedContent(
-                    targetState = editorTarget,
-                    transitionSpec = {
-                        // The editor enters from the end edge and leaves the way it came.
-                        val direction = if (targetState != null) 1 else -1
-                        (slideInHorizontally(slide) { direction * it / 6 } + fadeIn(fade)) togetherWith
-                            (slideOutHorizontally(slide) { -direction * it / 6 } + fadeOut(fade))
-                    },
-                    label = "screen",
-                ) { target ->
-                    if (target == null) {
-                        CardListScreen(
-                            cards = viewModel.cards,
-                            activeId = viewModel.activeId,
-                            defaultId = viewModel.defaultId,
-                            onToggleActive = viewModel::toggleActive,
-                            onToggleDefault = viewModel::toggleDefault,
-                            onAddCard = { editorTarget = NewCard },
-                            onEditCard = { editorTarget = it },
-                            forceRaw = viewModel.forceRaw,
-                            onToggleForceRaw = viewModel::toggleForceRaw,
-                            showPermissionBanner = !viewModel.secureSettingsGranted && !viewModel.forceRaw,
-                            onPermissionBannerClick = viewModel::showPermissionPrompt,
-                        )
-                    } else {
-                        // Remembered so the screen still shows the card while it animates out after a delete.
-                        val card = remember { viewModel.cards.find { it.id == target } }
-                        CardEditorScreen(
-                            card = card,
-                            onBack = { editorTarget = null },
-                            onSave = { name, uid ->
-                                if (card == null) viewModel.add(name, uid) else viewModel.update(card.id, name, uid)
-                                editorTarget = null
-                            },
-                            onDelete = {
-                                card?.let { viewModel.delete(it.id) }
-                                editorTarget = null
-                            },
-                        )
+
+                PredictiveBackHandler(enabled = editorTarget != null) { progress ->
+                    var swiped = false
+                    try {
+                        progress.collect { backEvent ->
+                            swiped = true
+                            swiping = true
+                            swipeEdge = backEvent.swipeEdge
+                            swipeProgress = backEvent.progress
+                        }
+                        // Only a swipe the system committed carries the editor off. A plain back press goes as before.
+                        if (swiped) {
+                            animate(swipeDismiss, 1f, animationSpec = fade) { value, _ -> swipeDismiss = value }
+                            swipeCommitted = true
+                        }
+                        editorTarget = null
+                    } catch (e: CancellationException) {
+                        // Cancelling the gesture cancels this coroutine too, so the spring back needs NonCancellable.
+                        // A commit that was still carrying the editor off comes back too.
+                        withContext(NonCancellable) {
+                            launch { animate(swipeProgress, 0f, animationSpec = fade) { value, _ -> swipeProgress = value } }
+                            launch { animate(swipeDismiss, 0f, animationSpec = fade) { value, _ -> swipeDismiss = value } }
+                        }
+                        throw e
+                    } finally {
+                        swiping = false
+                    }
+                }
+
+                // Opening always starts the editor at rest, whatever the last swipe left behind.
+                fun openEditor(target: String) {
+                    swipeProgress = 0f
+                    swipeDismiss = 0f
+                    swipeCommitted = false
+                    editorTarget = target
+                }
+
+                val list: @Composable () -> Unit = {
+                    CardListScreen(
+                        cards = viewModel.cards,
+                        activeId = viewModel.activeId,
+                        defaultId = viewModel.defaultId,
+                        onToggleActive = viewModel::toggleActive,
+                        onToggleDefault = viewModel::toggleDefault,
+                        onAddCard = { openEditor(NewCard) },
+                        onEditCard = { openEditor(it) },
+                        forceRaw = viewModel.forceRaw,
+                        onToggleForceRaw = viewModel::toggleForceRaw,
+                        showPermissionBanner = !viewModel.secureSettingsGranted && !viewModel.forceRaw,
+                        onPermissionBannerClick = viewModel::showPermissionPrompt,
+                    )
+                }
+
+                Box(Modifier.fillMaxSize()) {
+                    if (swiping) {
+                        Box(Modifier.fillMaxSize()) {
+                            list()
+                            // The list dims as the editor pulls away from it.
+                            Box(
+                                Modifier.fillMaxSize().drawBehind {
+                                    val alpha = ScrimAlpha * swipeProgress * (1f - swipeDismiss)
+                                    drawRect(Color.Black, alpha = alpha.coerceIn(0f, 1f))
+                                },
+                            )
+                        }
+                    }
+                    AnimatedContent(
+                        targetState = editorTarget,
+                        modifier = Modifier.fillMaxSize(),
+                        transitionSpec = {
+                            if (targetState == null && swipeCommitted) {
+                                // The editor has already gone off the edge, so the list simply appears.
+                                EnterTransition.None togetherWith ExitTransition.None
+                            } else {
+                                // The editor enters from the end edge and leaves the way it came.
+                                val direction = if (targetState != null) 1 else -1
+                                (slideInHorizontally(slide) { direction * it / 6 } + fadeIn(fade)) togetherWith
+                                    (slideOutHorizontally(slide) { -direction * it / 6 } + fadeOut(fade))
+                            }
+                        },
+                        label = "screen",
+                    ) { target ->
+                        if (target == null) {
+                            list()
+                        } else {
+                            // Remembered so the screen still shows the card while it animates out after a delete.
+                            val card = remember { viewModel.cards.find { it.id == target } }
+                            Box(
+                                Modifier.fillMaxSize().graphicsLayer {
+                                    // The editor shrinks and rounds off as the swipe goes on, then slides off toward
+                                    // the edge the swipe started from once the swipe is committed.
+                                    val scale = 1f - 0.1f * swipeProgress
+                                    scaleX = scale
+                                    scaleY = scale
+                                    val side = if (swipeEdge == BackEventCompat.EDGE_RIGHT) -1 else 1
+                                    translationX = side * size.width * swipeDismiss
+                                    val radius = SwipeCornerRadius * swipeProgress
+                                    shape = RoundedCornerShape(radius)
+                                    clip = radius > 0.dp
+                                },
+                            ) {
+                                CardEditorScreen(
+                                    card = card,
+                                    onBack = { editorTarget = null },
+                                    onSave = { name, uid ->
+                                        if (card == null) viewModel.add(name, uid) else viewModel.update(card.id, name, uid)
+                                        editorTarget = null
+                                    },
+                                    onDelete = {
+                                        card?.let { viewModel.delete(it.id) }
+                                        editorTarget = null
+                                    },
+                                )
+                            }
+                        }
                     }
                 }
 
