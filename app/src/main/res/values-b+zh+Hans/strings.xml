@@ -120,4 +120,17 @@
     <string name="raw_foreground_activity_required">原始 NFC 访问需要前台界面。</string>
     <string name="raw_app_not_foreground">原始 NFC 访问需要应用位于前台。</string>
     <string name="raw_polling_state_failed">NFC 轮询状态切换失败，状态码 %1$d。</string>
+    <string name="test_app_name">PixelCard SAK Test</string>
+    <string name="emulation_profile">模拟配置</string>
+    <string name="profile_default">默认配置</string>
+    <string name="profile_sak08">SAK 08 · 实验性</string>
+    <string name="profile_default_help">保留原有后端的默认值。扫描卡片仅复制 UID。</string>
+    <string name="profile_sak08_help">请求 SDD 04 / Platform 00 / SAK 08。仅配置身份信息，不提供 Classic 身份验证或卡片存储器。射频输出尚未验证。</string>
+    <string name="uid_random_warning">以 08 开头的四字节 UID 可能会被控制器随机化。</string>
+    <string name="oem_internal_failure">NFC 服务报告内部错误（状态 2）。</string>
+    <string name="profile_readback_mismatch">恢复轮询后读取的 NCI 配置不匹配：%1$s。射频输出尚未验证。</string>
+    <string name="request_status">请求状态 · 射频未验证</string>
+    <string name="no_requests">尚无请求记录。保存卡片后，点击卡片以激活。</string>
+    <string name="saved_status_notice">已保存的请求历史，不是实时射频测量。</string>
+    <string name="copy_status">复制状态</string>
 </resources>

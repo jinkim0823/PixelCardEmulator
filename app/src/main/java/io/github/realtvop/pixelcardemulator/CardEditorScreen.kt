@@ -98,7 +98,7 @@ private val FormMaxWidth = 560.dp
 fun CardEditorScreen(
     card: SavedCard?,
     onBack: () -> Unit,
-    onSave: (name: String, uid: String) -> Unit,
+    onSave: (name: String, uid: String, profile: CardProfile) -> Unit,
     onDelete: () -> Unit,
 ) {
     val haptics = LocalHapticFeedback.current
@@ -111,6 +111,8 @@ fun CardEditorScreen(
     var uidShown by rememberSaveable { mutableStateOf(card == null) }
     val uidInteraction = remember { MutableInteractionSource() }
     val uidFocused by uidInteraction.collectIsFocusedAsState()
+    var profileId by rememberSaveable { mutableStateOf(card?.profile?.storageId ?: "default") }
+    val selectedProfile = CardProfile.fromStorage(profileId)
     var scanning by rememberSaveable { mutableStateOf(false) }
     var scanError by rememberSaveable { mutableStateOf<String?>(null) }
     var confirmingDelete by rememberSaveable { mutableStateOf(false) }
@@ -166,7 +168,7 @@ fun CardEditorScreen(
                 contentAlignment = Alignment.Center,
             ) {
                 Button(
-                    onClick = { uid?.let { onSave(name.text.toString().trim(), it) } },
+                    onClick = { uid?.let { onSave(name.text.toString().trim(), it, selectedProfile) } },
                     shapes = ButtonDefaults.shapesFor(height),
                     modifier = Modifier
                         .widthIn(max = FormMaxWidth)
@@ -207,6 +209,25 @@ fun CardEditorScreen(
                     colors = TextFieldDefaults.tonalColors(),
                 )
 
+                Spacer(Modifier.height(24.dp))
+                Text(stringResource(R.string.emulation_profile), style = MaterialTheme.typography.titleMedium)
+                CardProfile.entries.forEach { profile ->
+                    androidx.compose.material3.FilterChip(
+                        selected = selectedProfile == profile,
+                        onClick = { profileId = profile.storageId },
+                        label = { Text(stringResource(if (profile == CardProfile.Sak08)
+                            R.string.profile_sak08 else R.string.profile_default)) },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                Text(
+                    stringResource(if (selectedProfile == CardProfile.Sak08)
+                        R.string.profile_sak08_help else R.string.profile_default_help),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                if (uid?.let { hasRandomUidPrefix(it.hexToBytes()) } == true) {
+                    Text(stringResource(R.string.uid_random_warning), color = MaterialTheme.colorScheme.error)
+                }
                 Spacer(Modifier.height(24.dp))
                 UidSizeChoice(
                     selected = uidSize,
@@ -446,7 +467,7 @@ private fun TextFieldBuffer.spaceBytes() {
 @Composable
 private fun AddCardPreview() {
     PixelCardTheme {
-        CardEditorScreen(card = null, onBack = {}, onSave = { _, _ -> }, onDelete = {})
+        CardEditorScreen(card = null, onBack = {}, onSave = { _, _, _ -> }, onDelete = {})
     }
 }
 
@@ -454,6 +475,6 @@ private fun AddCardPreview() {
 @Composable
 private fun EditCardPreview() {
     PixelCardTheme {
-        CardEditorScreen(card = MockCards[1], onBack = {}, onSave = { _, _ -> }, onDelete = {})
+        CardEditorScreen(card = MockCards[1], onBack = {}, onSave = { _, _, _ -> }, onDelete = {})
     }
 }

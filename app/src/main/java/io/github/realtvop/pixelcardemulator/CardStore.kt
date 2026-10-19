@@ -26,6 +26,7 @@ class CardStore(context: Context) {
                             id = item.getString("id"),
                             name = item.getString("name"),
                             uid = uid.toHex(),
+                            profile = CardProfile.fromStorage(item.optString("profile", "default")),
                         ),
                     )
                 }
@@ -40,6 +41,7 @@ class CardStore(context: Context) {
                     JSONObject()
                         .put("id", card.id)
                         .put("name", card.name)
+                        .put("profile", card.profile.storageId)
                         .put("uid", Base64.encodeToString(card.uid.hexToBytes(), Base64.NO_WRAP)),
                 )
             }

@@ -36,6 +36,7 @@ data class SavedCard(
     val name: String,
     val uid: String,
     val id: String = UUID.randomUUID().toString(),
+    val profile: CardProfile = CardProfile.Default,
 ) {
     init {
         require(uid.length / 2 in SupportedUidSizes && uid.length % 2 == 0) { "Unsupported UID length" }
@@ -104,6 +105,9 @@ class CardsViewModel(application: Application) : AndroidViewModel(application) {
     )
         private set
 
+    var diagnostics by mutableStateOf(emulator.diagnostics)
+        private set
+
     var forceRaw by mutableStateOf(emulator.forceRaw)
         private set
 
@@ -131,6 +135,7 @@ class CardsViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun refreshActiveCard() {
+        diagnostics = emulator.diagnostics
         if (emulatorUiState.busy) return
         activeId = store.loadActiveCardId().takeIf { id -> cards.any { it.id == id } }
     }
@@ -169,14 +174,14 @@ class CardsViewModel(application: Application) : AndroidViewModel(application) {
         getApplication<Application>().setAppLanguage(language)
     }
 
-    fun add(name: String, uid: String) {
-        cards = cards + SavedCard(name, uid)
+    fun add(name: String, uid: String, profile: CardProfile) {
+        cards = cards + SavedCard(name, uid, profile = profile)
         store.saveCards(cards)
     }
 
-    fun update(id: String, name: String, uid: String) {
+    fun update(id: String, name: String, uid: String, profile: CardProfile) {
         val previous = cards.find { it.id == id }
-        cards = cards.map { if (it.id == id) it.copy(name = name, uid = uid) else it }
+        cards = cards.map { if (it.id == id) it.copy(name = name, uid = uid, profile = profile) else it }
         store.saveCards(cards)
         if (activeId == id && !emulatorUiState.busy) {
             cards.find { it.id == id }?.let { runAction(PendingAction.Activate(it, previous)) }
@@ -323,6 +328,7 @@ class CardsViewModel(application: Application) : AndroidViewModel(application) {
             }
         } catch (error: Throwable) {
             mainHandler.post {
+                diagnostics = emulator.diagnostics
                 if (error is ExperimentalRawConsentRequiredException) {
                     emulatorUiState = EmulatorUiState(experimentalRawConfirmationRequired = true)
                 } else {
@@ -335,7 +341,7 @@ class CardsViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun executeActivation(action: PendingAction.Activate) {
         try {
-            emulator.activate(action.card.uid.hexToBytes())
+            emulator.activate(action.card.uid.hexToBytes(), action.card.profile)
             mainHandler.post {
                 setActive(action.card.id)
                 finishAction()
@@ -343,7 +349,7 @@ class CardsViewModel(application: Application) : AndroidViewModel(application) {
         } catch (activationError: Throwable) {
             val rollbackError = runCatching {
                 if (action.previousCard != null) {
-                    emulator.activate(action.previousCard.uid.hexToBytes())
+                    emulator.activate(action.previousCard.uid.hexToBytes(), action.previousCard.profile)
                     if (action.previousCard.id == action.card.id) {
                         mainHandler.post {
                             cards = cards.map { card ->
@@ -364,6 +370,7 @@ class CardsViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun finishAction() {
+        diagnostics = emulator.diagnostics
         emulatorUiState = EmulatorUiState()
         pendingAction = null
     }

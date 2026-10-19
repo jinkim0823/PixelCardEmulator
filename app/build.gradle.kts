@@ -39,12 +39,12 @@ android {
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "io.github.realtvop.pixelcardemulator"
+        applicationId = "io.github.jinkim0823.pixelcardemulator.saktest"
         // Dynamic color needs Android 12, so the theme has no static fallback palette.
         minSdk = 35
         targetSdk = 37
         versionCode = 1
-        versionName = "0.1"
+        versionName = "0.1-sak08.1"
     }
 
     if (releaseSigningConfigured) {
@@ -87,6 +87,7 @@ kotlin {
 }
 
 dependencies {
+    testImplementation("junit:junit:4.13.2")
     implementation(libs.androidx.activity.compose)
     implementation(libs.conscrypt.android)
     implementation(libs.libadb.android)

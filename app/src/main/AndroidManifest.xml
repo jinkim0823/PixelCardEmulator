@@ -25,7 +25,7 @@
     <application
         android:enableOnBackInvokedCallback="true"
         android:icon="@mipmap/ic_launcher"
-        android:label="@string/app_name"
+        android:label="@string/test_app_name"
         android:localeConfig="@xml/locales_config"
         android:supportsRtl="true"
         android:theme="@style/Theme.PixelCardEmulator">
@@ -53,7 +53,7 @@
             android:launchMode="singleTop"
             android:noHistory="true"
             android:showWhenLocked="true"
-            android:taskAffinity="io.github.realtvop.pixelcardemulator.card_picker"
+            android:taskAffinity="${applicationId}.card_picker"
             android:turnScreenOn="true" />
         <receiver
             android:name=".NfcFieldReceiver"

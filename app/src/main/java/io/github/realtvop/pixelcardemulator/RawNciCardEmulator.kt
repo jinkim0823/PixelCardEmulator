@@ -51,9 +51,6 @@ internal object RawNfcDeviceCatalog {
         get() = manufacturer in setOf("google", "samsung", "oneplus") ||
             (manufacturer == "sony" && model == "XQ-EC72")
 
-    val profile: RawProfile
-        get() = if (manufacturer == "google") RawProfile.Pixel else RawProfile.CtsType4A
-
     val prefersDiscoveryTechnology: Boolean
         get() = Build.VERSION.SDK_INT >= 35 && manufacturer == "oneplus" && model == "CPH2747"
 
@@ -67,16 +64,6 @@ internal object RawNfcDeviceCatalog {
             "sony" -> model == "XQ-EC72" && Build.VERSION.SDK_INT >= 35
             else -> false
         }
-}
-
-internal enum class RawProfile(
-    val bitFrameSdd: Byte,
-    val platformConfig: Byte,
-    val selInfo: Byte,
-    val rats: Byte,
-) {
-    Pixel(0x04, 0x00, 0x00, 0x00),
-    CtsType4A(0x06, 0x0C, 0x20, 0x40),
 }
 
 internal class RawNciCardEmulator(
@@ -98,7 +85,7 @@ internal class RawNciCardEmulator(
         pollingControl.setActivity(activity)
     }
 
-    override fun activate(uid: ByteArray) {
+    override fun activate(uid: ByteArray, cardProfile: CardProfile) {
         require(uid.size in SupportedUidSizes) { "Unsupported UID length" }
         ensureNfcEnabled()
 
@@ -111,19 +98,39 @@ internal class RawNciCardEmulator(
             context.getString(R.string.raw_snapshot_incomplete)
         }
 
-        val profile = RawNfcDeviceCatalog.profile
+        val profile = cardProfile.rawProfile(Build.MANUFACTURER.equals("google", ignoreCase = true))
         pollingControl.withPaused(fieldResetDelayMillis()) {
-            setPreferredConfiguration(uid, profile)
+            setPreferredConfiguration(uid, profile, cardProfile == CardProfile.Default)
             requireUid(uid, R.string.raw_uid_not_retained)
         }
 
         if (!uidMatches(uid)) {
             pollingControl.withPaused(fieldResetDelayMillis()) {
-                setPreferredConfiguration(uid, profile)
+                setPreferredConfiguration(uid, profile, cardProfile == CardProfile.Default)
                 Thread.sleep(120)
                 requireUid(uid, R.string.raw_uid_overwritten_after_resume)
             }
             requireUid(uid, R.string.raw_uid_overwritten_after_replay)
+        }
+        if (cardProfile == CardProfile.Sak08) requireIdentity(uid, profile)
+    }
+
+    /** Config readback after resume is evidence about NCI state, never RF output. */
+    private fun requireIdentity(uid: ByteArray, profile: RawProfile) {
+        val expected = mapOf(
+            NfccConfigControl to byteArrayOf(0),
+            LaBitFrameSdd to byteArrayOf(profile.bitFrameSdd),
+            LaPlatformConfig to byteArrayOf(profile.platformConfig),
+            LaSelInfo to byteArrayOf(profile.selInfo),
+            LaNfcid1 to uid,
+            LiARatsTb1 to byteArrayOf(profile.rats),
+        )
+        val actual = getConfig(expected.keys.toList())
+        val mismatches = expected.filter { (id, value) -> actual[id]?.contentEquals(value) != true }.keys
+        if (mismatches.isNotEmpty()) {
+            throw NfcEmulationException(context.getString(
+                R.string.profile_readback_mismatch, mismatches.joinToString { "0x%02X".format(it) },
+            ))
         }
     }
 
@@ -169,8 +176,8 @@ internal class RawNciCardEmulator(
         )
     }
 
-    private fun setPreferredConfiguration(uid: ByteArray, profile: RawProfile) {
-        if (RawNfcDeviceCatalog.prefersUidOnly) {
+    private fun setPreferredConfiguration(uid: ByteArray, profile: RawProfile, allowUidOnly: Boolean) {
+        if (allowUidOnly && RawNfcDeviceCatalog.prefersUidOnly) {
             val uidOnlyWorked = runCatching {
                 setConfig(listOf(LaNfcid1 to uid))
                 requireUid(uid, R.string.raw_uid_only_not_retained)

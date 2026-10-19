@@ -1,4 +1,6 @@
-# PixelCardEmulator
+# PixelCardEmulator — SAK 08 test fork
+
+This fork adds per-card SAK08 identity requests and request diagnostics. Phone RF behavior and reader compatibility are **unverified**. Install and compare using [SAK08-TESTING.md](SAK08-TESTING.md). The original project description follows.
 
 English | [简体中文](README.zh-CN.md)
 

@@ -124,4 +124,17 @@
     <string name="raw_foreground_activity_required">A foreground activity is required for raw NFC access.</string>
     <string name="raw_app_not_foreground">The app must be in the foreground for raw NFC access.</string>
     <string name="raw_polling_state_failed">NFC polling state change failed with status %1$d.</string>
+    <string name="test_app_name">PixelCard SAK Test</string>
+    <string name="emulation_profile">Emulation profile</string>
+    <string name="profile_default">Default profile</string>
+    <string name="profile_sak08">SAK 08 · experimental</string>
+    <string name="profile_default_help">Keeps the original backend defaults. Scanning a card copies its UID only.</string>
+    <string name="profile_sak08_help">Requests SDD 04 / Platform 00 / SAK 08. Identity only: no Classic authentication or card memory. RF output is unverified.</string>
+    <string name="uid_random_warning">A 4-byte UID starting with 08 may be randomized by the controller.</string>
+    <string name="oem_internal_failure">The NFC service reported an internal failure (status 2).</string>
+    <string name="profile_readback_mismatch">NCI profile readback did not match after resume: %1$s. RF output is unverified.</string>
+    <string name="request_status">Request status · RF unverified</string>
+    <string name="no_requests">No request recorded. Save a card, then tap it to activate.</string>
+    <string name="saved_status_notice">Saved request history, not a live RF measurement.</string>
+    <string name="copy_status">Copy status</string>
 </resources>

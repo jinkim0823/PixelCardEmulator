@@ -18,7 +18,7 @@ internal const val NfcFieldResetDelayMillis = 250L
 
 internal interface NfcCardEmulationBackend {
     val isSupported: Boolean
-    fun activate(uid: ByteArray)
+    fun activate(uid: ByteArray, cardProfile: CardProfile)
     fun deactivate()
 }
 
@@ -33,18 +33,19 @@ private class OemNfcCardEmulator(
     override val isSupported: Boolean
         get() = runCatching { resolveApi(requireEnabled = false) }.isSuccess
 
-    override fun activate(uid: ByteArray) {
+    override fun activate(uid: ByteArray, cardProfile: CardProfile) {
         require(uid.size in SupportedUidSizes) { "Unsupported UID length" }
         val api = resolveApi()
+        val profile = cardProfile.oemProfile()
         withOptionalDiscoveryRestart {
             invoke(
                 api,
                 enabled = true,
-                bitFrameSdd = 0x04,
-                platformConfig = 0x00,
-                selInfo = 0x00,
+                bitFrameSdd = profile.bitFrameSdd.toInt(),
+                platformConfig = profile.platformConfig.toInt(),
+                selInfo = profile.selInfo.toInt(),
                 nfcid1 = uid,
-                rats = 0x00,
+                rats = profile.rats.toInt(),
             )
         }
     }
@@ -131,7 +132,7 @@ private class OemNfcCardEmulator(
         when (status) {
             0 -> Unit
             1 -> throw NfcEmulationException(context.getString(R.string.nfc_turn_on_to_activate))
-            2 -> throw NfcEmulationException(context.getString(R.string.controller_rejected_profile))
+            2 -> throw NfcEmulationException(context.getString(R.string.oem_internal_failure))
             null -> throw NfcEmulationException(context.getString(R.string.oem_service_no_status))
             else -> throw NfcEmulationException(context.getString(R.string.oem_unknown_status, status))
         }
@@ -185,7 +186,16 @@ class NfcEmulationCoordinator(private val context: Context) {
         ) { "Could not save raw NFC consent" }
     }
 
-    fun activate(uid: ByteArray) {
+    val diagnostics: String
+        get() = preferences.getString("diagnostic_history", "").orEmpty()
+
+    private fun recordDiagnostic(message: String) {
+        val time = java.text.SimpleDateFormat("MM-dd HH:mm:ss", java.util.Locale.ROOT).format(java.util.Date())
+        val entry = "$time • $message"
+        preferences.edit().putString("diagnostic_history", prependDiagnostic(entry, diagnostics)).apply()
+    }
+
+    fun activate(uid: ByteArray, cardProfile: CardProfile = CardProfile.Default) {
         val backendName = preferences.getString(ActiveBackendKey, null)
         val (name, backend) = when (backendName) {
             "oem" -> "oem" to oem
@@ -195,7 +205,22 @@ class NfcEmulationCoordinator(private val context: Context) {
         check(preferences.edit().putString(ActiveBackendKey, name).commit()) {
             context.getString(R.string.recovery_route_save_failed)
         }
-        backend.activate(uid)
+        val profile = if (name == "oem") cardProfile.oemProfile()
+            else cardProfile.rawProfile(android.os.Build.MANUFACTURER.equals("google", ignoreCase = true))
+        val request = "${name.uppercase()} • ${cardProfile.storageId} • UID ${uid.size} bytes\n${profile.requestDescription()}"
+        try {
+            backend.activate(uid, cardProfile)
+            val result = if (name == "oem") "API accepted (status 0); no controller readback"
+                else if (cardProfile == CardProfile.Sak08) "NCI accepted; profile + UID readback matched"
+                else "NCI accepted; UID readback matched (other fields unverified)"
+            // OnePlus may keep its existing profile when its UID-only fast path succeeds.
+            val detail = if (name == "raw" && cardProfile == CardProfile.Default && RawNfcDeviceCatalog.prefersUidOnly)
+                "\nDefault raw may use UID-only; profile values above are fallback requests." else ""
+            recordDiagnostic("$request\n$result$detail\nRF not measured")
+        } catch (error: Throwable) {
+            recordDiagnostic("$request\nFAILED: ${error.message ?: error.javaClass.simpleName}\nRestore may be required; RF not measured")
+            throw error
+        }
     }
 
     fun deactivate() {
@@ -204,9 +229,16 @@ class NfcEmulationCoordinator(private val context: Context) {
             "oem" -> oem
             else -> if (raw.hasPendingRestore) raw else oem
         }
-        backend.deactivate()
-        check(preferences.edit().remove(ActiveBackendKey).commit()) {
-            context.getString(R.string.recovery_route_clear_failed)
+        val name = preferences.getString(ActiveBackendKey, null) ?: if (raw.hasPendingRestore) "raw" else "oem"
+        try {
+            backend.deactivate()
+            check(preferences.edit().remove(ActiveBackendKey).commit()) {
+                context.getString(R.string.recovery_route_clear_failed)
+            }
+            recordDiagnostic("${name.uppercase()} • OFF request completed\nRF / full restoration not measured")
+        } catch (error: Throwable) {
+            recordDiagnostic("${name.uppercase()} • OFF FAILED: ${error.message ?: error.javaClass.simpleName}\nRestore pending; RF not measured")
+            throw error
         }
     }
 

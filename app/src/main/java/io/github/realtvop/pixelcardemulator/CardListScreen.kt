@@ -106,6 +106,7 @@ fun CardListScreen(
     automaticPickerEnabled: Boolean = false,
     onAutomaticPickerClick: () -> Unit = {},
     managementEnabled: Boolean = true,
+    diagnostics: String = "",
 ) {
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     // The card whose swipe menu is open. Held here so that opening one closes any other.
@@ -217,6 +218,7 @@ fun CardListScreen(
                     },
                     scrollBehavior = scrollBehavior,
                 )
+                if (managementEnabled) RequestStatusPanel(diagnostics)
                 AnimatedVisibility(visible = showPermissionBanner) {
                     PermissionBanner(onClick = onPermissionBannerClick)
                 }
@@ -464,7 +466,11 @@ private fun CardRow(
                 .heightIn(min = 88.dp),
             leadingContent = { CardBadge(active) },
             supportingContent = {
-                AnimatedVisibility(isDefault) { Text(stringResource(R.string.default_card)) }
+                Column {
+                    Text(stringResource(if (card.profile == CardProfile.Sak08)
+                        R.string.profile_sak08 else R.string.profile_default))
+                    AnimatedVisibility(isDefault) { Text(stringResource(R.string.default_card)) }
+                }
             },
             trailingContent = {
                 if (busy) {

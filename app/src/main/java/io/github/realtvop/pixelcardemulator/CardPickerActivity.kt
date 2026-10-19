@@ -146,13 +146,13 @@ class CardPickerActivity : ComponentActivity() {
         }
 
         return try {
-            emulator.activate(selected.uid.hexToBytes())
+            emulator.activate(selected.uid.hexToBytes(), selected.profile)
             store.saveActiveCardId(selected.id)
             null
         } catch (activationError: Throwable) {
             val rollbackError = runCatching {
                 if (previous != null) {
-                    emulator.activate(previous.uid.hexToBytes())
+                    emulator.activate(previous.uid.hexToBytes(), previous.profile)
                     store.saveActiveCardId(previous.id)
                 } else {
                     emulator.deactivate()

@@ -145,6 +145,7 @@ class MainActivity : ComponentActivity() {
                 val list: @Composable () -> Unit = {
                     CardListScreen(
                         cards = viewModel.cards,
+                        diagnostics = viewModel.diagnostics,
                         activeId = viewModel.activeId,
                         busyCardId = viewModel.emulatorUiState.busyCardId,
                         defaultId = viewModel.defaultId,
@@ -216,8 +217,8 @@ class MainActivity : ComponentActivity() {
                                 CardEditorScreen(
                                     card = card,
                                     onBack = { editorTarget = null },
-                                    onSave = { name, uid ->
-                                        if (card == null) viewModel.add(name, uid) else viewModel.update(card.id, name, uid)
+                                    onSave = { name, uid, profile ->
+                                        if (card == null) viewModel.add(name, uid, profile) else viewModel.update(card.id, name, uid, profile)
                                         editorTarget = null
                                     },
                                     onDelete = {
