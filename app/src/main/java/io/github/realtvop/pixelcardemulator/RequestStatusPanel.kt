@@ -20,7 +20,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 
 @Composable
-internal fun RequestStatusPanel(history: String) {
+internal fun RequestStatusPanel(history: String, onRead: () -> Unit, busy: Boolean) {
     val context = LocalContext.current
     Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)) {
         Row(Modifier.fillMaxWidth()) {
@@ -29,9 +29,12 @@ internal fun RequestStatusPanel(history: String) {
                 modifier = Modifier.weight(1f),
                 style = MaterialTheme.typography.titleSmall,
             )
+            TextButton(onClick = onRead, enabled = !busy) {
+                Text(stringResource(R.string.read_config))
+            }
             TextButton(onClick = {
                 val device = "${Build.MANUFACTURER} ${Build.MODEL} / Android ${Build.VERSION.RELEASE} / SDK ${Build.VERSION.SDK_INT}"
-                val text = "PixelCard SAK Test 0.1-sak08.1\n$device\nRF not measured\n\n$history"
+                val text = "PixelCard SAK Test 0.1-sak08.2\n$device\nRF not measured\n\n$history"
                 context.getSystemService(ClipboardManager::class.java)
                     .setPrimaryClip(ClipData.newPlainText("NFC request status", text))
             }, enabled = history.isNotBlank()) {

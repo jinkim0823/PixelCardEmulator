@@ -187,6 +187,14 @@ internal class RawNciCardEmulator(
         setProfile(uid, profile)
     }
 
+    /** CORE_GET_CONFIG only: no pause, routing changes, SET_CONFIG or recovery markers. */
+    fun readControllerIdentity(expectedUid: ByteArray?): String {
+        ensureNfcEnabled()
+        return describeIdentityReadback(getConfig(listOf(
+            NfccConfigControl, LaBitFrameSdd, LaPlatformConfig, LaSelInfo, LaNfcid1, LiARatsTb1,
+        )), expectedUid)
+    }
+
     private fun readCompleteSnapshot(): Map<Int, ByteArray> {
         val values = linkedMapOf<Int, ByteArray>()
         runCatching { values.putAll(getConfig(SnapshotParameters)) }

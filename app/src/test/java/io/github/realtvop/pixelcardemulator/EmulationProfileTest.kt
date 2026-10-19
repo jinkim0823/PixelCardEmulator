@@ -44,4 +44,18 @@ class EmulationProfileTest {
         assertEquals(3, history.split("\n\n").size)
         assertTrue(history.startsWith("Latest OFF"))
     }
+    @Test fun readbackShowsActualSakAndUidMismatchWithoutLeakingUid() {
+        val uid = byteArrayOf(0x11, 0x22, 0x33, 0x44)
+        val result = describeIdentityReadback(mapOf(0x32 to byteArrayOf(0), 0x33 to uid), byteArrayOf(1, 2, 3, 4))
+        assertTrue(result.contains("SAK=00"))
+        assertTrue(result.contains("DIFFERS"))
+        assertTrue(result.contains("RF not measured"))
+        assertFalse(result.contains("11223344"))
+    }
+
+    @Test fun missingReadbackIsNotReportedAsMatch() {
+        val result = describeIdentityReadback(emptyMap(), byteArrayOf(1, 2, 3, 4))
+        assertTrue(result.contains("SAK=missing"))
+        assertFalse(result.contains("matches active card"))
+    }
 }

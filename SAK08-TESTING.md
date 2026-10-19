@@ -45,3 +45,9 @@ Use JDK21 and an Android SDK containing platform37 and the build tools selected 
 ```
 
 Output: `app/build/outputs/apk/debug/app-debug.apk`. This is a debug-signed test build. The unit tests cover profile migration defaults, OEM/raw selection, the four-byte08 condition and bounded failure/rollback history. They do not exercise a physical NFC controller. APK assembly and lint also do not establish RF or door-lock compatibility.
+
+## Read-only controller diagnostic (0.1-sak08.2)
+
+**Read config** issues CORE_GET_CONFIG for85/30/31/32/33/58 without pausing polling or changing NFC settings. It displays actual SDD/Platform/SAK/Control85/TB1 and compares UID with the active saved card without displaying the UID. A match verifies the controller configuration at read time, not the RF response.
+
+The debug APK includes `DebugNciReadReceiver`, protected by the Android DUMP permission, for an ADB-triggered read without activating a card. It is absent from release builds. Unit coverage also checks mismatched/missing readback and UID redaction. Version0.1-sak08.2 was delivered directly through ADB; the v0.1-sak08.1 prerelease remains the earlier build.

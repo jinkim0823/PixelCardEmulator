@@ -137,4 +137,5 @@
     <string name="no_requests">No request recorded. Save a card, then tap it to activate.</string>
     <string name="saved_status_notice">Saved request history, not a live RF measurement.</string>
     <string name="copy_status">Copy status</string>
+    <string name="read_config">Read config</string>
 </resources>

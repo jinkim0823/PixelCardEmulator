@@ -133,4 +133,5 @@
     <string name="no_requests">尚无请求记录。保存卡片后，点击卡片以激活。</string>
     <string name="saved_status_notice">已保存的请求历史，不是实时射频测量。</string>
     <string name="copy_status">复制状态</string>
+    <string name="read_config">读取配置</string>
 </resources>

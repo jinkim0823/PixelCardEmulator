@@ -155,6 +155,19 @@ class CardsViewModel(application: Application) : AndroidViewModel(application) {
         store.saveDefaultCardId(defaultId)
     }
 
+    fun readControllerConfiguration() {
+        if (emulatorUiState.busy) return
+        val uid = cards.find { it.id == activeId }?.uid?.hexToBytes()
+        emulatorUiState = emulatorUiState.copy(busy = true)
+        executor.execute {
+            emulator.readControllerConfiguration(uid)
+            mainHandler.post {
+                diagnostics = emulator.diagnostics
+                emulatorUiState = emulatorUiState.copy(busy = false)
+            }
+        }
+    }
+
     fun toggleForceRaw() {
         forceRaw = !forceRaw
         emulator.forceRaw = forceRaw

@@ -39,3 +39,19 @@ internal fun hasRandomUidPrefix(uid: ByteArray): Boolean = uid.size == 4 && uid[
 
 internal fun prependDiagnostic(entry: String, history: String): String =
     (listOf(entry) + history.split("\n\n").filter(String::isNotBlank)).take(3).joinToString("\n\n")
+
+/** Only identity configuration is shown; the UID value itself never enters diagnostics. */
+internal fun describeIdentityReadback(values: Map<Int, ByteArray>, expectedUid: ByteArray?): String {
+    fun field(id: Int): String = values[id]?.joinToString("") { "%02X".format(it.toInt() and 0xff) } ?: "missing"
+    val uid = values[0x33]
+    val match = when {
+        uid == null -> "missing"
+        expectedUid == null -> "no active card to compare"
+        uid.contentEquals(expectedUid) -> "matches active card"
+        else -> "DIFFERS from active card"
+    }
+    return "NCI READ ONLY • controller configuration\n" +
+        "SDD=${field(0x30)}  Platform=${field(0x31)}  SAK=${field(0x32)}\n" +
+        "Control85=${field(0x85)}  TB1=${field(0x58)}\n" +
+        "UID ${uid?.size ?: 0} bytes • $match\nRF not measured"
+}

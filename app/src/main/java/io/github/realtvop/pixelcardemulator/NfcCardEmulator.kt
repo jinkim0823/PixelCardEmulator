@@ -195,6 +195,14 @@ class NfcEmulationCoordinator(private val context: Context) {
         preferences.edit().putString("diagnostic_history", prependDiagnostic(entry, diagnostics)).apply()
     }
 
+    fun readControllerConfiguration(expectedUid: ByteArray?) {
+        try {
+            recordDiagnostic(raw.readControllerIdentity(expectedUid))
+        } catch (error: Throwable) {
+            recordDiagnostic("NCI READ ONLY failed: ${error.message ?: error.javaClass.simpleName}\nNo settings changed; RF not measured")
+        }
+    }
+
     fun activate(uid: ByteArray, cardProfile: CardProfile = CardProfile.Default) {
         val backendName = preferences.getString(ActiveBackendKey, null)
         val (name, backend) = when (backendName) {

@@ -146,6 +146,8 @@ class MainActivity : ComponentActivity() {
                     CardListScreen(
                         cards = viewModel.cards,
                         diagnostics = viewModel.diagnostics,
+                        onReadConfiguration = viewModel::readControllerConfiguration,
+                        configurationBusy = viewModel.emulatorUiState.busy,
                         activeId = viewModel.activeId,
                         busyCardId = viewModel.emulatorUiState.busyCardId,
                         defaultId = viewModel.defaultId,
